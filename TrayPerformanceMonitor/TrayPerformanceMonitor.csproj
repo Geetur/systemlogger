@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Suppress unresolved Microsoft.VisualBasic resolution warnings (harmless here) -->
+    <NoWarn>$(NoWarn);MSB3245;MSB3243</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="10.0.1" />
+  </ItemGroup>
+
+</Project>

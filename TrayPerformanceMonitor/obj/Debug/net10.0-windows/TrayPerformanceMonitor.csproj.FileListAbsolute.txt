@@ -1,0 +1,14 @@
+C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\bin\Debug\net10.0-windows\TrayPerformanceMonitor.exe
+C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\bin\Debug\net10.0-windows\TrayPerformanceMonitor.deps.json
+C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\bin\Debug\net10.0-windows\TrayPerformanceMonitor.runtimeconfig.json
+C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\bin\Debug\net10.0-windows\TrayPerformanceMonitor.dll
+C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\bin\Debug\net10.0-windows\TrayPerformanceMonitor.pdb
+C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\obj\Debug\net10.0-windows\TrayPerformanceMonitor.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\obj\Debug\net10.0-windows\TrayPerformanceMonitor.AssemblyInfoInputs.cache
+C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\obj\Debug\net10.0-windows\TrayPerformanceMonitor.AssemblyInfo.cs
+C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\obj\Debug\net10.0-windows\TrayPerformanceMonitor.csproj.CoreCompileInputs.cache
+C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\obj\Debug\net10.0-windows\TrayPerformanceMonitor.dll
+C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\obj\Debug\net10.0-windows\refint\TrayPerformanceMonitor.dll
+C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\obj\Debug\net10.0-windows\TrayPerformanceMonitor.pdb
+C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\obj\Debug\net10.0-windows\TrayPerformanceMonitor.genruntimeconfig.cache
+C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\obj\Debug\net10.0-windows\ref\TrayPerformanceMonitor.dll
