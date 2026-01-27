@@ -31,6 +31,8 @@ namespace TrayPerformanceMonitor
         private readonly StreamWriter logFile;
         private readonly string logPath;
         private readonly object logLock = new object();
+        private readonly HashSet<string> knownDayHeaders;
+        private DateTime lastHeaderDate = DateTime.MinValue;
         private readonly System.Windows.Forms.Timer timer;
         private const int timerIntervalMs = 500;
         private readonly PerformanceCounter cpuCounter;
@@ -84,21 +86,18 @@ namespace TrayPerformanceMonitor
             {
                 var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
                 logPath = Path.Combine(desktop, "TrayPerformanceMonitor_log.txt");
-                logFile = new StreamWriter(logPath, true) { AutoFlush = true };
-                lock (logLock)
-                {
-                    EnsureDailyHeaderLocked();
-                }
             }
             catch
             {
                 // fallback to local rolling file if Desktop isn't writable
                 logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TrayPerformanceMonitor_log.txt");
-                logFile = new StreamWriter(logPath, true) { AutoFlush = true };
-                lock (logLock)
-                {
-                    EnsureDailyHeaderLocked();
-                }
+            }
+
+            knownDayHeaders = LoadExistingHeaders(logPath);
+            logFile = new StreamWriter(logPath, true) { AutoFlush = true };
+            lock (logLock)
+            {
+                EnsureDailyHeaderLocked();
             }
             cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
             _ = cpuCounter.NextValue(); // prime the counter
@@ -320,37 +319,51 @@ namespace TrayPerformanceMonitor
             return $"===== {dt:yyyy-MM-dd} ({dt:dddd}) =====";
         }
 
-        private void EnsureDailyHeaderLocked()
+        private static HashSet<string> LoadExistingHeaders(string path)
         {
-            var todayHeader = BuildDayHeader(DateTime.Now);
-            var hasToday = false;
-
-            if (File.Exists(logPath))
+            var headers = new HashSet<string>(StringComparer.Ordinal);
+            try
             {
-                try
+                if (!File.Exists(path)) return headers;
+
+                foreach (var line in File.ReadLines(path))
                 {
-                    foreach (var line in File.ReadLines(logPath))
+                    var trimmed = line?.Trim();
+                    if (string.IsNullOrEmpty(trimmed)) continue;
+                    if (trimmed.StartsWith("=====", StringComparison.Ordinal) && trimmed.EndsWith("=====") && trimmed.Length > 10)
                     {
-                        if (string.Equals(line?.Trim(), todayHeader, StringComparison.Ordinal))
-                        {
-                            hasToday = true;
-                            break;
-                        }
+                        headers.Add(trimmed);
                     }
                 }
-                catch
-                {
-                    hasToday = false;
-                }
+            }
+            catch
+            {
+                // If we can't read, we just won't pre-load headers.
             }
 
-            if (!hasToday)
+            return headers;
+        }
+
+        private void EnsureDailyHeaderLocked()
+        {
+            var today = DateTime.Now.Date;
+            var todayHeader = BuildDayHeader(DateTime.Now);
+
+            if (lastHeaderDate == today && knownDayHeaders.Contains(todayHeader))
+            {
+                return;
+            }
+
+            if (!knownDayHeaders.Contains(todayHeader))
             {
                 logFile.WriteLine();
                 logFile.WriteLine(todayHeader);
                 logFile.WriteLine($"Started: {DateTime.Now:HH:mm:ss}  (Local)");
                 logFile.WriteLine(new string('-', 48));
+                knownDayHeaders.Add(todayHeader);
             }
+
+            lastHeaderDate = today;
         }
 
         private void logPerformanceSpike(string metric, float value)
