@@ -57,13 +57,13 @@ namespace TrayPerformanceMonitor
             // Start as always-on-top
             TopMost = true;
 
-            // transparent background using a transparency key color
+            // transparent background
             BackColor = Color.Lime;
             TransparencyKey = Color.Lime;
             Opacity = 1.0;
 
-            Width = 170;
-            Height = 22;
+            Width = 160;
+            Height = 52;
 
             // reduce flicker
             SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint, true);
@@ -71,61 +71,61 @@ namespace TrayPerformanceMonitor
             cpuLabel = new Label
             {
                 AutoSize = false,
-                Width = 80,
-                Dock = DockStyle.Left,
+                Height = 24,
+                Dock = DockStyle.Top,
                 TextAlign = ContentAlignment.MiddleLeft,
-                ForeColor = Color.Black,
+                ForeColor = Color.LimeGreen,
                 BackColor = Color.Transparent,
-                Font = new Font("Segoe UI", 8, FontStyle.Regular),
-                Padding = new Padding(2)
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Padding = new Padding(6, 0, 4, 0)
             };
 
             ramLabel = new Label
             {
                 AutoSize = false,
-                Width = 90,
-                Dock = DockStyle.Fill,
+                Height = 24,
+                Dock = DockStyle.Top,
                 TextAlign = ContentAlignment.MiddleLeft,
-                ForeColor = Color.Black,
+                ForeColor = Color.LimeGreen,
                 BackColor = Color.Transparent,
-                Font = new Font("Segoe UI", 8, FontStyle.Regular),
-                Padding = new Padding(2)
+                Font = new Font("Segoe UI", 10, FontStyle.Bold),
+                Padding = new Padding(6, 0, 4, 0)
             };
 
             Controls.Add(ramLabel);
             Controls.Add(cpuLabel);
 
-            // Try to position just to the left of the notification area (system tray)
+            // Position inside the taskbar (left side, near widgets/weather)
             int x = 8, y = 8;
             try
             {
-                var shell = FindWindow("Shell_TrayWnd", null);
-                if (shell != IntPtr.Zero)
+                var taskbar = FindWindow("Shell_TrayWnd", null);
+                if (taskbar != IntPtr.Zero && GetWindowRect(taskbar, out RECT r))
                 {
-                    var tray = FindWindowEx(shell, IntPtr.Zero, "TrayNotifyWnd", null);
-                    if (tray == IntPtr.Zero)
+                    // place inside taskbar bounds, to the right of the widgets/weather area
+                    x = r.left + 240;
+                    y = r.top + ((r.bottom - r.top) - Height) / 2;
+                }
+                else
+                {
+                    var screen = Screen.PrimaryScreen ?? (Screen.AllScreens.Length > 0 ? Screen.AllScreens[0] : null);
+                    if (screen != null)
                     {
-                        tray = FindWindowEx(shell, IntPtr.Zero, "NotificationAreaWindow", null);
-                    }
-
-                    if (tray != IntPtr.Zero && GetWindowRect(tray, out RECT r))
-                    {
-                        x = r.left - Width - 6;
-                        y = r.top + ((r.bottom - r.top) - Height) / 2;
-                    }
-                    else
-                    {
-                        var wa = Screen.PrimaryScreen.Bounds;
-                        x = wa.Right - Width - 8;
+                        var wa = screen.WorkingArea;
+                        x = wa.Left + 8;
                         y = wa.Bottom - Height - 8;
                     }
                 }
             }
             catch
             {
-                var wa = Screen.PrimaryScreen.Bounds;
-                x = wa.Right - Width - 8;
-                y = wa.Bottom - Height - 8;
+                var screen = Screen.PrimaryScreen ?? (Screen.AllScreens.Length > 0 ? Screen.AllScreens[0] : null);
+                if (screen != null)
+                {
+                    var wa = screen.WorkingArea;
+                    x = wa.Left + 8;
+                    y = wa.Bottom - Height - 8;
+                }
             }
 
             Location = new Point(x, y);
