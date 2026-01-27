@@ -1,0 +1,25 @@
+# Build outputs
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.VC.db
+*.VC.VC.opendb
+
+# Rider/Resharper
+.idea/
+_ReSharper*/
+
+# Logs
+*.log
+performance_log.txt
+TrayPerformanceMonitor/performance_log.txt
+
+# OS files
+Thumbs.db
+Desktop.ini

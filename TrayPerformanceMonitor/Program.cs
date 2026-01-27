@@ -79,51 +79,26 @@ namespace TrayPerformanceMonitor
             // keep the tray icon visible alongside the taskbar-adjacent status window
             trayIcon.Visible = true;
 
-            // Create a persistent log file on the user's Desktop named by date
+            // Create a persistent log file on the user's Desktop (single file with per-day headers)
             try
             {
                 var desktop = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-                var logFileName = $"TrayPerformanceMonitor_log_{DateTime.Now:yyyy-MM-dd}.txt";
-                var logPath = Path.Combine(desktop, logFileName);
-
-                // Ensure we append to a single file. If file exists, check whether today's header is present;
-                // if not, append a new header for today. This keeps one rolling file with per-day sections.
-                var todayHeader = $"Logs for {DateTime.Now:yyyy-MM-dd}";
-
-                bool hasToday = false;
-                if (File.Exists(logPath))
-                {
-                    try
-                    {
-                        foreach (var line in File.ReadLines(logPath))
-                        {
-                            if (string.Equals(line?.Trim(), todayHeader, StringComparison.Ordinal))
-                            {
-                                hasToday = true;
-                                break;
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        // if reading fails, we'll append conservatively
-                        hasToday = false;
-                    }
-                }
-
+                logPath = Path.Combine(desktop, "TrayPerformanceMonitor_log.txt");
                 logFile = new StreamWriter(logPath, true) { AutoFlush = true };
-                if (!hasToday)
+                lock (logLock)
                 {
-                    logFile.WriteLine();
-                    logFile.WriteLine(todayHeader);
-                    logFile.WriteLine($"Started: {DateTime.Now.ToString("o", CultureInfo.InvariantCulture)}");
-                    logFile.WriteLine();
+                    EnsureDailyHeaderLocked();
                 }
             }
             catch
             {
                 // fallback to local rolling file if Desktop isn't writable
-                logFile = new StreamWriter("TrayPerformanceMonitor_log.txt", true) { AutoFlush = true };
+                logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TrayPerformanceMonitor_log.txt");
+                logFile = new StreamWriter(logPath, true) { AutoFlush = true };
+                lock (logLock)
+                {
+                    EnsureDailyHeaderLocked();
+                }
             }
             cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
             _ = cpuCounter.NextValue(); // prime the counter
@@ -310,7 +285,7 @@ namespace TrayPerformanceMonitor
                 .OrderByDescending(p => p.CpuPct)
                 .Take(3);
 
-            return string.Join("\n", topProcesses.Select(p => $"{p.Name} (PID {p.Pid}): {p.CpuPct:F1}%"));
+            return string.Join(Environment.NewLine, topProcesses.Select(p => $"  - {p.Name} (PID {p.Pid}): {p.CpuPct:F1}%"));
         }
 
         private string getTopRAMProcesses()
@@ -337,7 +312,45 @@ namespace TrayPerformanceMonitor
                 .OrderByDescending(p => p.RamMb)
                 .Take(3);
 
-            return string.Join("\n", topProcesses.Select(p => $"{p.Name} (PID {p.Pid}): {p.RamMb:F0} MB"));
+            return string.Join(Environment.NewLine, topProcesses.Select(p => $"  - {p.Name} (PID {p.Pid}): {p.RamMb:F0} MB"));
+        }
+
+        private static string BuildDayHeader(DateTime dt)
+        {
+            return $"===== {dt:yyyy-MM-dd} ({dt:dddd}) =====";
+        }
+
+        private void EnsureDailyHeaderLocked()
+        {
+            var todayHeader = BuildDayHeader(DateTime.Now);
+            var hasToday = false;
+
+            if (File.Exists(logPath))
+            {
+                try
+                {
+                    foreach (var line in File.ReadLines(logPath))
+                    {
+                        if (string.Equals(line?.Trim(), todayHeader, StringComparison.Ordinal))
+                        {
+                            hasToday = true;
+                            break;
+                        }
+                    }
+                }
+                catch
+                {
+                    hasToday = false;
+                }
+            }
+
+            if (!hasToday)
+            {
+                logFile.WriteLine();
+                logFile.WriteLine(todayHeader);
+                logFile.WriteLine($"Started: {DateTime.Now:HH:mm:ss}  (Local)");
+                logFile.WriteLine(new string('-', 48));
+            }
         }
 
         private void logPerformanceSpike(string metric, float value)
@@ -346,52 +359,20 @@ namespace TrayPerformanceMonitor
             {
                 lock (logLock)
                 {
-                    // Ensure today's header exists in the rolling logfile
-                    var todayHeader = $"Logs for {DateTime.Now:yyyy-MM-dd}";
-                    try
-                    {
-                        if (string.IsNullOrEmpty(logPath) || !File.Exists(logPath))
-                        {
-                            logFile.WriteLine();
-                            logFile.WriteLine(todayHeader);
-                            logFile.WriteLine($"Started: {DateTime.Now.ToString("o", CultureInfo.InvariantCulture)}");
-                            logFile.WriteLine();
-                        }
-                        else
-                        {
-                            var hasToday = false;
-                            foreach (var line in File.ReadLines(logPath))
-                            {
-                                if (string.Equals(line?.Trim(), todayHeader, StringComparison.Ordinal))
-                                {
-                                    hasToday = true;
-                                    break;
-                                }
-                            }
-                            if (!hasToday)
-                            {
-                                logFile.WriteLine();
-                                logFile.WriteLine(todayHeader);
-                                logFile.WriteLine($"Started: {DateTime.Now.ToString("o", CultureInfo.InvariantCulture)}");
-                                logFile.WriteLine();
-                            }
-                        }
-                    }
-                    catch
-                    {
-                        // ignore read errors
-                    }
+                    EnsureDailyHeaderLocked();
 
-                    string logEntry = $"{DateTime.Now.ToString("o", CultureInfo.InvariantCulture)} - {metric} spike detected (>= 5s): {value:F1}%";
+                    string logEntry = $"{DateTime.Now:HH:mm:ss} - {metric} spike detected (>= {spikeTimeThreshold}s): {value:F1}%";
                     logFile.WriteLine(logEntry);
 
                     if (metric == "CPU")
                     {
-                        logFile.WriteLine("Top CPU-consuming processes:\n" + getTopCPUProcesses());
+                        logFile.WriteLine("Top CPU-consuming processes:");
+                        logFile.WriteLine(getTopCPUProcesses());
                     }
                     else if (metric == "RAM")
                     {
-                        logFile.WriteLine("Top RAM-consuming processes:\n" + getTopRAMProcesses());
+                        logFile.WriteLine("Top RAM-consuming processes:");
+                        logFile.WriteLine(getTopRAMProcesses());
                     }
 
                     logFile.WriteLine();
