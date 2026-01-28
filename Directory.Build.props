@@ -1,0 +1,51 @@
+<Project>
+  <!-- 
+    Directory.Build.props - Shared MSBuild properties for all projects in the solution
+    This file is automatically imported by all projects in the directory tree
+  -->
+  
+  <PropertyGroup>
+    <!-- Common project settings -->
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    
+    <!-- Code analysis -->
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    
+    <!-- Build settings -->
+    <Deterministic>true</Deterministic>
+    <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
+    
+    <!-- Package metadata (for future NuGet packaging if needed) -->
+    <Authors>TrayPerformanceMonitor Team</Authors>
+    <Company>TrayPerformanceMonitor</Company>
+    <Product>TrayPerformanceMonitor</Product>
+    <Copyright>Copyright © 2024-2026 TrayPerformanceMonitor</Copyright>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <!-- CI/CD specific settings -->
+  <PropertyGroup Condition="'$(CI)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <!-- Debug configuration -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <DefineConstants>$(DefineConstants);DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+
+  <!-- Release configuration -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DefineConstants>$(DefineConstants);RELEASE;TRACE</DefineConstants>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+
+</Project>

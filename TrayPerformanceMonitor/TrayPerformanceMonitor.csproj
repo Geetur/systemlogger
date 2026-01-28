@@ -2,16 +2,24 @@
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows</TargetFramework>
-    <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <!-- Suppress unresolved Microsoft.VisualBasic resolution warnings (harmless here) -->
-    <NoWarn>$(NoWarn);MSB3245;MSB3243</NoWarn>
+    <RootNamespace>TrayPerformanceMonitor</RootNamespace>
+    <AssemblyName>TrayPerformanceMonitor</AssemblyName>
+    
+    <!-- Documentation generation -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    
+    <!-- Suppress warnings that don't apply to this project -->
+    <NoWarn>$(NoWarn);MSB3245;MSB3243;CS1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="System.Diagnostics.PerformanceCounter" Version="10.0.1" />
+  </ItemGroup>
+
+  <!-- Exclude old files that have been moved to new locations -->
+  <ItemGroup>
+    <Compile Remove="StatusWindow.cs" Condition="Exists('StatusWindow.cs')" />
   </ItemGroup>
 
 </Project>
