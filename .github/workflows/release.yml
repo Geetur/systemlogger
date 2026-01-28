@@ -1,0 +1,69 @@
+# Release Pipeline for TrayPerformanceMonitor
+# Creates GitHub releases with built artifacts when tags are pushed
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore "capstone project.sln"
+
+      - name: Run tests
+        run: dotnet test "capstone project.sln" --configuration Release --verbosity normal
+
+      - name: Publish Framework-Dependent
+        run: |
+          dotnet publish TrayPerformanceMonitor/TrayPerformanceMonitor.csproj `
+            --configuration Release `
+            --output ./publish/framework-dependent `
+            --self-contained false `
+            -p:PublishSingleFile=true
+
+      - name: Publish Self-Contained
+        run: |
+          dotnet publish TrayPerformanceMonitor/TrayPerformanceMonitor.csproj `
+            --configuration Release `
+            --output ./publish/self-contained `
+            --self-contained true `
+            --runtime win-x64 `
+            -p:PublishSingleFile=true `
+            -p:IncludeNativeLibrariesForSelfExtract=true
+
+      - name: Create zip archives
+        run: |
+          Compress-Archive -Path ./publish/framework-dependent/* -DestinationPath ./TrayPerformanceMonitor-${{ github.ref_name }}-framework-dependent.zip
+          Compress-Archive -Path ./publish/self-contained/* -DestinationPath ./TrayPerformanceMonitor-${{ github.ref_name }}-win-x64.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            ./TrayPerformanceMonitor-${{ github.ref_name }}-framework-dependent.zip
+            ./TrayPerformanceMonitor-${{ github.ref_name }}-win-x64.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
