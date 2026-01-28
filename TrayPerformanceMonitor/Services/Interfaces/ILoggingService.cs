@@ -26,5 +26,15 @@ namespace TrayPerformanceMonitor.Services.Interfaces
         /// Ensures the log file has a header for the current day.
         /// </summary>
         void EnsureDailyHeader();
+
+        /// <summary>
+        /// Removes log entries older than the configured retention period.
+        /// </summary>
+        /// <remarks>
+        /// This method reads the existing log file, filters out entries from dates
+        /// older than <see cref="Configuration.AppConfiguration.LogRetentionDays"/>,
+        /// and rewrites the file with only the retained entries.
+        /// </remarks>
+        void PruneOldEntries();
     }
 }

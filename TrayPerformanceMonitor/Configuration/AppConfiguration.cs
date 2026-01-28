@@ -55,5 +55,11 @@ namespace TrayPerformanceMonitor.Configuration
         /// Gets the application display name shown in the tray icon tooltip.
         /// </summary>
         public const string ApplicationName = "Performance Monitor";
+
+        /// <summary>
+        /// Gets the number of days of log entries to retain in the log file.
+        /// Log entries older than this threshold will be pruned on startup.
+        /// </summary>
+        public const int LogRetentionDays = 7;
     }
 }

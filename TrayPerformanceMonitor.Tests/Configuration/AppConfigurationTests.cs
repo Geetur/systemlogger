@@ -96,5 +96,23 @@ namespace TrayPerformanceMonitor.Tests.Configuration
         {
             Assert.False(string.IsNullOrWhiteSpace(AppConfiguration.ApplicationName));
         }
+
+        /// <summary>
+        /// Verifies that LogRetentionDays is a positive value.
+        /// </summary>
+        [Fact]
+        public void LogRetentionDays_IsPositive()
+        {
+            Assert.True(AppConfiguration.LogRetentionDays > 0);
+        }
+
+        /// <summary>
+        /// Verifies that LogRetentionDays defaults to 7 days.
+        /// </summary>
+        [Fact]
+        public void LogRetentionDays_IsSevenDays()
+        {
+            Assert.Equal(7, AppConfiguration.LogRetentionDays);
+        }
     }
 }
