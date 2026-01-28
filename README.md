@@ -143,8 +143,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Intuition and Reasoning
 
-## 
-
 This is a Windows 11 program that I developed as an intern for Outback Construnction Inc.'s IT Department. 
 The reason I created it was because I wanted to streamline the troubleshooting process for said department by having an objective source of truth
 for the oh-so-common "slow computer" errors that we kept recieving internally. The logic is that 99% of "slow computer" errors are a result of system
