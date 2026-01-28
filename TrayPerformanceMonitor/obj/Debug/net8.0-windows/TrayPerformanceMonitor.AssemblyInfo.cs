@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TrayPerformanceMonitor")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8bd372bd96ca34808cbc5a2ce01c03e2286dbf21")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b629f75fd02f1b7a929f75a5b975be93ada9e82f")]
 [assembly: System.Reflection.AssemblyProductAttribute("TrayPerformanceMonitor")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TrayPerformanceMonitor")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
