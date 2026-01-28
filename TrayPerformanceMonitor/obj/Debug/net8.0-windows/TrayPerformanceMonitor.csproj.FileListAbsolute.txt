@@ -24,3 +24,5 @@ C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\obj\Debug\n
 C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\obj\Debug\net8.0-windows\TrayPerformanceMonitor.genruntimeconfig.cache
 C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\obj\Debug\net8.0-windows\ref\TrayPerformanceMonitor.dll
 C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\obj\Debug\net8.0-windows\TrayPerformanceMonitor.sourcelink.json
+C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\bin\Debug\net8.0-windows\TrayPerformanceMonitor.xml
+C:\Users\JeterPontes\Desktop\capstone project\TrayPerformanceMonitor\obj\Debug\net8.0-windows\TrayPerformanceMonitor.xml
