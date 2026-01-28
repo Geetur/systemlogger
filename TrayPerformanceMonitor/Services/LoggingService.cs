@@ -20,13 +20,15 @@ namespace TrayPerformanceMonitor.Services
     /// This service is thread-safe and uses a lock to ensure consistent file writes.
     /// The log file is stored on the user's Desktop by default, with a fallback to
     /// the application's base directory if the Desktop is not accessible.
+    /// Log entries older than <see cref="AppConfiguration.LogRetentionDays"/> are
+    /// automatically pruned on startup.
     /// </remarks>
     public sealed class LoggingService : ILoggingService
     {
-        private readonly StreamWriter _logFile;
         private readonly string _logPath;
         private readonly object _logLock = new();
-        private readonly HashSet<string> _knownDayHeaders;
+        private HashSet<string> _knownDayHeaders;
+        private StreamWriter _logFile;
         private DateTime _lastHeaderDate = DateTime.MinValue;
         private bool _disposed;
 
@@ -36,10 +38,15 @@ namespace TrayPerformanceMonitor.Services
         /// <remarks>
         /// Creates or opens the log file on the user's Desktop. If the Desktop
         /// is not accessible, falls back to the application's base directory.
+        /// Old log entries are pruned on startup based on <see cref="AppConfiguration.LogRetentionDays"/>.
         /// </remarks>
         public LoggingService()
         {
             _logPath = DetermineLogFilePath();
+
+            // Prune old entries before opening the log file for writing
+            PruneOldEntriesInternal();
+
             _knownDayHeaders = LoadExistingHeaders(_logPath);
             _logFile = new StreamWriter(_logPath, append: true) { AutoFlush = true };
 
@@ -85,6 +92,24 @@ namespace TrayPerformanceMonitor.Services
             lock (_logLock)
             {
                 EnsureDailyHeaderLocked();
+            }
+        }
+
+        /// <inheritdoc/>
+        public void PruneOldEntries()
+        {
+            ObjectDisposedException.ThrowIf(_disposed, this);
+
+            lock (_logLock)
+            {
+                // Close the current file before pruning
+                _logFile?.Dispose();
+
+                PruneOldEntriesInternal();
+
+                // Reopen the log file and reload headers
+                _knownDayHeaders = LoadExistingHeaders(_logPath);
+                _logFile = new StreamWriter(_logPath, append: true) { AutoFlush = true };
             }
         }
 
@@ -209,6 +234,100 @@ namespace TrayPerformanceMonitor.Services
             }
 
             _lastHeaderDate = today;
+        }
+
+        /// <summary>
+        /// Internal implementation of log pruning that removes entries older than the retention period.
+        /// </summary>
+        /// <remarks>
+        /// This method reads the entire log file, identifies date headers, and removes
+        /// all content associated with dates older than <see cref="AppConfiguration.LogRetentionDays"/>.
+        /// The file is rewritten with only the retained entries.
+        /// </remarks>
+        private void PruneOldEntriesInternal()
+        {
+            try
+            {
+                if (!File.Exists(_logPath))
+                {
+                    return;
+                }
+
+                var cutoffDate = DateTime.Now.Date.AddDays(-AppConfiguration.LogRetentionDays);
+                var allLines = File.ReadAllLines(_logPath);
+                var retainedLines = new List<string>();
+                var currentSectionDate = DateTime.MinValue;
+                var isRetainingCurrentSection = true;
+
+                foreach (var line in allLines)
+                {
+                    var parsedDate = TryParseDateHeader(line);
+
+                    if (parsedDate.HasValue)
+                    {
+                        currentSectionDate = parsedDate.Value;
+                        isRetainingCurrentSection = currentSectionDate >= cutoffDate;
+                    }
+
+                    if (isRetainingCurrentSection)
+                    {
+                        retainedLines.Add(line);
+                    }
+                }
+
+                // Only rewrite if we actually removed something
+                if (retainedLines.Count < allLines.Length)
+                {
+                    // Remove leading empty lines from retained content
+                    while (retainedLines.Count > 0 && string.IsNullOrWhiteSpace(retainedLines[0]))
+                    {
+                        retainedLines.RemoveAt(0);
+                    }
+
+                    File.WriteAllLines(_logPath, retainedLines);
+                }
+            }
+            catch (Exception)
+            {
+                // If pruning fails, continue with existing file
+                // The application should not crash due to log maintenance issues
+            }
+        }
+
+        /// <summary>
+        /// Attempts to parse a date from a header line.
+        /// </summary>
+        /// <param name="line">The line to parse.</param>
+        /// <returns>The parsed date if the line is a valid header; otherwise, <c>null</c>.</returns>
+        private static DateTime? TryParseDateHeader(string line)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                return null;
+            }
+
+            var trimmed = line.Trim();
+
+            // Match lines like: "===== 2026-01-27 (Monday) ====="
+            if (!trimmed.StartsWith("=====", StringComparison.Ordinal) ||
+                !trimmed.EndsWith("=====", StringComparison.Ordinal) ||
+                trimmed.Length < 25)
+            {
+                return null;
+            }
+
+            // Extract the date portion: "2026-01-27"
+            var startIndex = trimmed.IndexOf(' ') + 1;
+            var endIndex = trimmed.IndexOf(' ', startIndex);
+
+            if (startIndex <= 0 || endIndex <= startIndex)
+            {
+                return null;
+            }
+
+            var dateString = trimmed[startIndex..endIndex];
+
+            return DateTime.TryParse(dateString, out var result) ? result.Date : null;
         }
     }
 }
