@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyCopyrightAttribute("Copyright © 2024-2026 TrayPerformanceMonitor")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+71fead5edbe14622b71f11ac1421b48de9a20566")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+56f5258151a0add9ffa2b8ae8bdd57d72424e30d")]
 [assembly: System.Reflection.AssemblyProductAttribute("TrayPerformanceMonitor")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TrayPerformanceMonitor")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
