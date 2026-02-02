@@ -71,6 +71,12 @@ namespace TrayPerformanceMonitor.Services
         /// <inheritdoc/>
         public void LogPerformanceSpike(string metricName, float value, string topProcessesInfo)
         {
+            LogPerformanceSpike(metricName, value, topProcessesInfo, aiSummary: null);
+        }
+
+        /// <inheritdoc/>
+        public void LogPerformanceSpike(string metricName, float value, string topProcessesInfo, string? aiSummary)
+        {
             ArgumentException.ThrowIfNullOrWhiteSpace(metricName);
             ArgumentException.ThrowIfNullOrWhiteSpace(topProcessesInfo);
             ObjectDisposedException.ThrowIf(_disposed, this);
@@ -79,9 +85,22 @@ namespace TrayPerformanceMonitor.Services
             {
                 $"{DateTime.Now:HH:mm:ss} - {metricName} spike detected (>= {AppConfiguration.SpikeTimeThresholdSeconds}s): {value:F1}%",
                 $"Top {metricName}-consuming processes:",
-                topProcessesInfo,
-                string.Empty
+                topProcessesInfo
             };
+
+            // Add AI summary if provided
+            if (!string.IsNullOrWhiteSpace(aiSummary))
+            {
+                entries.Add(string.Empty);
+                entries.Add("AI Analysis:");
+                // Indent each line of the AI summary for better readability
+                foreach (var line in aiSummary.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    entries.Add($"  {line.Trim()}");
+                }
+            }
+
+            entries.Add(string.Empty);
 
             lock (_logLock)
             {
@@ -90,6 +109,43 @@ namespace TrayPerformanceMonitor.Services
                 
                 // Ensure daily header exists
                 EnsureDailyHeaderLocked();
+
+                // Try to write directly to file
+                if (!TryWriteLinesToFileLocked(entries))
+                {
+                    // File is locked, cache the entries
+                    CacheEntriesLocked(entries);
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public void AppendAiSummary(string metricName, DateTime spikeTime, string aiSummary)
+        {
+            if (string.IsNullOrWhiteSpace(aiSummary))
+            {
+                return;
+            }
+
+            ObjectDisposedException.ThrowIf(_disposed, this);
+
+            var entries = new List<string>
+            {
+                $"AI Analysis (for {metricName} spike at {spikeTime:HH:mm:ss}):",
+            };
+
+            // Indent each line of the AI summary for better readability
+            foreach (var line in aiSummary.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                entries.Add($"  {line.Trim()}");
+            }
+
+            entries.Add(string.Empty);
+
+            lock (_logLock)
+            {
+                // Try to flush any cached entries first
+                FlushMemoryCacheLocked();
 
                 // Try to write directly to file
                 if (!TryWriteLinesToFileLocked(entries))
