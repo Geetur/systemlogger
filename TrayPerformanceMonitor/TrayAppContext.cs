@@ -21,6 +21,7 @@ namespace TrayPerformanceMonitor
     /// <remarks>
     /// This class coordinates between the various services to monitor system performance,
     /// display metrics in a status window, and log sustained performance spikes to disk.
+    /// AI-powered summaries are generated for each spike if a model is available.
     /// </remarks>
     internal sealed class TrayAppContext : ApplicationContext
     {
@@ -30,6 +31,7 @@ namespace TrayPerformanceMonitor
         private readonly IPerformanceService _performanceService;
         private readonly ILoggingService _loggingService;
         private readonly IProcessAnalyzer _processAnalyzer;
+        private readonly IAiSummaryService? _aiSummaryService;
 
         private readonly SpikeTracker _cpuSpikeTracker;
         private readonly SpikeTracker _ramSpikeTracker;
@@ -40,8 +42,51 @@ namespace TrayPerformanceMonitor
         /// Initializes a new instance of the <see cref="TrayAppContext"/> class.
         /// </summary>
         public TrayAppContext()
-            : this(new PerformanceService(), new LoggingService(), new ProcessAnalyzer())
+            : this(new PerformanceService(), new LoggingService(), new ProcessAnalyzer(), CreateAiService())
         {
+        }
+
+        /// <summary>
+        /// Creates and initializes the AI summary service if a model is available.
+        /// </summary>
+        /// <returns>An initialized AI service, or null if no model is found.</returns>
+        private static AiSummaryService? CreateAiService()
+        {
+            // Check if AI summaries are enabled - this is a compile-time constant
+            // but we suppress the warning as it allows easy toggling via config
+#pragma warning disable CS0162 // Unreachable code detected
+            if (!AppConfiguration.AiSummaryEnabled)
+            {
+                return null;
+            }
+#pragma warning restore CS0162
+
+            var aiService = new AiSummaryService();
+
+            // Try to find and load the model from common locations
+            var modelPaths = new[]
+            {
+                // Application directory
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppConfiguration.AiModelFileName),
+                // User's Desktop
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), AppConfiguration.AiModelFileName),
+                // User's Documents
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), AppConfiguration.AiModelFileName),
+                // Models subdirectory
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Models", AppConfiguration.AiModelFileName)
+            };
+
+            foreach (var modelPath in modelPaths)
+            {
+                if (aiService.TryLoadModel(modelPath))
+                {
+                    return aiService;
+                }
+            }
+
+            // No model found - dispose and return null
+            aiService.Dispose();
+            return null;
         }
 
         /// <summary>
@@ -51,10 +96,12 @@ namespace TrayPerformanceMonitor
         /// <param name="performanceService">The performance monitoring service.</param>
         /// <param name="loggingService">The logging service.</param>
         /// <param name="processAnalyzer">The process analyzer service.</param>
+        /// <param name="aiSummaryService">The optional AI summary service.</param>
         public TrayAppContext(
             IPerformanceService performanceService,
             ILoggingService loggingService,
-            IProcessAnalyzer processAnalyzer)
+            IProcessAnalyzer processAnalyzer,
+            IAiSummaryService? aiSummaryService = null)
         {
             ArgumentNullException.ThrowIfNull(performanceService);
             ArgumentNullException.ThrowIfNull(loggingService);
@@ -63,6 +110,7 @@ namespace TrayPerformanceMonitor
             _performanceService = performanceService;
             _loggingService = loggingService;
             _processAnalyzer = processAnalyzer;
+            _aiSummaryService = aiSummaryService;
 
             // Initialize spike trackers
             _cpuSpikeTracker = new SpikeTracker(
@@ -248,7 +296,42 @@ namespace TrayPerformanceMonitor
             if (tracker.UpdateAndCheckForNewSpike(currentValue, AppConfiguration.TimerIntervalMs))
             {
                 var topProcesses = getTopProcesses();
+                var spikeTime = DateTime.Now;
+                
+                // Log immediately without AI summary
                 _loggingService.LogPerformanceSpike(metricName, currentValue, topProcesses);
+
+                // Generate AI summary asynchronously in the background
+                if (_aiSummaryService?.IsModelLoaded == true)
+                {
+                    _ = GenerateAndAppendAiSummaryAsync(metricName, currentValue, topProcesses, spikeTime);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Generates an AI summary asynchronously and appends it to the log file.
+        /// This runs in the background to avoid blocking the UI.
+        /// </summary>
+        /// <param name="metricName">The name of the metric.</param>
+        /// <param name="value">The metric value.</param>
+        /// <param name="topProcessesInfo">Information about top processes.</param>
+        /// <param name="spikeTime">The timestamp when the spike was detected.</param>
+        private async Task GenerateAndAppendAiSummaryAsync(string metricName, float value, string topProcessesInfo, DateTime spikeTime)
+        {
+            try
+            {
+                var aiSummary = await _aiSummaryService!.GenerateSpikeSummaryAsync(metricName, value, topProcessesInfo);
+                
+                if (!string.IsNullOrWhiteSpace(aiSummary))
+                {
+                    // Append the AI summary to the log with reference to the original spike
+                    _loggingService.AppendAiSummary(metricName, spikeTime, aiSummary);
+                }
+            }
+            catch (Exception)
+            {
+                // AI generation failed - spike was already logged, so no action needed
             }
         }
 
@@ -294,6 +377,15 @@ namespace TrayPerformanceMonitor
             try
             {
                 _loggingService?.Dispose();
+            }
+            catch (Exception)
+            {
+                // Ignore disposal failures
+            }
+
+            try
+            {
+                _aiSummaryService?.Dispose();
             }
             catch (Exception)
             {

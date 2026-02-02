@@ -1,12 +1,17 @@
 {
   "version": 2,
-  "dgSpecHash": "/hDmm59w9e8=",
+  "dgSpecHash": "8gDddjx21Y0=",
   "success": true,
   "projectFilePath": "C:\\Users\\JeterPontes\\Desktop\\capstone project\\TrayPerformanceMonitor\\TrayPerformanceMonitor.csproj",
   "expectedPackageFiles": [
+    "C:\\Users\\JeterPontes\\.nuget\\packages\\llamasharp\\0.18.0\\llamasharp.0.18.0.nupkg.sha512",
+    "C:\\Users\\JeterPontes\\.nuget\\packages\\llamasharp.backend.cpu\\0.18.0\\llamasharp.backend.cpu.0.18.0.nupkg.sha512",
+    "C:\\Users\\JeterPontes\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.1\\microsoft.extensions.dependencyinjection.abstractions.8.0.1.nupkg.sha512",
+    "C:\\Users\\JeterPontes\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\8.0.1\\microsoft.extensions.logging.abstractions.8.0.1.nupkg.sha512",
     "C:\\Users\\JeterPontes\\.nuget\\packages\\system.configuration.configurationmanager\\10.0.1\\system.configuration.configurationmanager.10.0.1.nupkg.sha512",
     "C:\\Users\\JeterPontes\\.nuget\\packages\\system.diagnostics.eventlog\\10.0.1\\system.diagnostics.eventlog.10.0.1.nupkg.sha512",
     "C:\\Users\\JeterPontes\\.nuget\\packages\\system.diagnostics.performancecounter\\10.0.1\\system.diagnostics.performancecounter.10.0.1.nupkg.sha512",
+    "C:\\Users\\JeterPontes\\.nuget\\packages\\system.numerics.tensors\\8.0.0\\system.numerics.tensors.8.0.0.nupkg.sha512",
     "C:\\Users\\JeterPontes\\.nuget\\packages\\system.security.cryptography.protecteddata\\10.0.1\\system.security.cryptography.protecteddata.10.0.1.nupkg.sha512",
     "C:\\Users\\JeterPontes\\.nuget\\packages\\system.threading.accesscontrol\\10.0.1\\system.threading.accesscontrol.10.0.1.nupkg.sha512"
   ],

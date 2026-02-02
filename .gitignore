@@ -61,3 +61,7 @@ Desktop.ini
 *.bak
 *.tmp
 *.temp
+
+# AI Model files (too large for GitHub)
+*.gguf
+Models/

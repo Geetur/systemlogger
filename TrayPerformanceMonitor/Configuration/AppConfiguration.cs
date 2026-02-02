@@ -61,5 +61,39 @@ namespace TrayPerformanceMonitor.Configuration
         /// Log entries older than this threshold will be pruned on startup.
         /// </summary>
         public const int LogRetentionDays = 7;
+
+        // =====================================================================
+        // AI Summary Configuration
+        // =====================================================================
+
+        /// <summary>
+        /// Gets the default filename for the AI model (GGUF format).
+        /// Recommended models for laptops: TinyLlama-1.1B, Phi-3-mini, or Llama-3.2-1B.
+        /// Place the model file in the application directory or specify full path.
+        /// </summary>
+        public const string AiModelFileName = "model.gguf";
+
+        /// <summary>
+        /// Gets the context size for AI inference.
+        /// Smaller values use less RAM but limit input length.
+        /// </summary>
+        public const uint AiContextSize = 2048;
+
+        /// <summary>
+        /// Gets the maximum number of tokens the AI can generate per response.
+        /// </summary>
+        public const int AiMaxTokens = 150;
+
+        /// <summary>
+        /// Gets the timeout in seconds for AI inference.
+        /// If the AI takes longer than this, it will be cancelled.
+        /// </summary>
+        public const int AiTimeoutSeconds = 30;
+
+        /// <summary>
+        /// Gets whether AI summaries are enabled by default.
+        /// Can be disabled if no model is available or for performance reasons.
+        /// </summary>
+        public const bool AiSummaryEnabled = true;
     }
 }
