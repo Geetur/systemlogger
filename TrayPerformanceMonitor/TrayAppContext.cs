@@ -295,14 +295,14 @@ namespace TrayPerformanceMonitor
                 _cpuSpikeTracker,
                 metrics.CpuUsagePercent,
                 "CPU",
-                () => _processAnalyzer.GetTopCpuProcesses(AppConfiguration.TopProcessCount));
+                () => _processAnalyzer.GetTopCpuProcesses(UserSettings.Instance.ValidatedTopProcessCount));
 
             // Check for RAM spike
             CheckAndLogSpike(
                 _ramSpikeTracker,
                 metrics.RamUsagePercent,
                 "RAM",
-                () => _processAnalyzer.GetTopRamProcesses(AppConfiguration.TopProcessCount));
+                () => _processAnalyzer.GetTopRamProcesses(UserSettings.Instance.ValidatedTopProcessCount));
         }
 
         /// <summary>
