@@ -22,10 +22,10 @@ $Models = @{
         MinSize = 500MB
     }
     "lite" = @{
-        Name = "Qwen2 0.5B (Q4_K_M)"
-        Size = "~400 MB"
-        Url = "https://huggingface.co/Qwen/Qwen2-0.5B-Instruct-GGUF/resolve/main/qwen2-0_5b-instruct-q4_k_m.gguf"
-        MinSize = 300MB
+        Name = "Qwen2 0.5B (Q2_K)"
+        Size = "~320 MB"
+        Url = "https://huggingface.co/Qwen/Qwen2-0.5B-Instruct-GGUF/resolve/main/qwen2-0_5b-instruct-q2_k.gguf"
+        MinSize = 250MB
     }
 }
 
