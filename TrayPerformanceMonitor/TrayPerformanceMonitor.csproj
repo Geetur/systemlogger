@@ -6,6 +6,9 @@
     <RootNamespace>TrayPerformanceMonitor</RootNamespace>
     <AssemblyName>TrayPerformanceMonitor</AssemblyName>
     
+    <!-- Application icon -->
+    <ApplicationIcon>Resources\app.ico</ApplicationIcon>
+    
     <!-- Documentation generation -->
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     
@@ -27,6 +30,11 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>Models\model.gguf</Link>
     </None>
+  </ItemGroup>
+
+  <!-- Embed application icon as resource -->
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\app.ico" LogicalName="TrayPerformanceMonitor.app.ico" />
   </ItemGroup>
 
   <!-- Exclude old files that have been moved to new locations -->
