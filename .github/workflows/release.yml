@@ -40,7 +40,8 @@ jobs:
           dotnet publish TrayPerformanceMonitor/TrayPerformanceMonitor.csproj `
             --configuration Release `
             --output ./publish `
-            --self-contained false
+            --self-contained true `
+            --runtime win-x64
 
       - name: Install Inno Setup
         run: |
@@ -84,4 +85,4 @@ jobs:
             ### Portable Version
             Download `TrayPerformanceMonitor-${{ github.ref_name }}-portable.zip`, extract anywhere, and run `TrayPerformanceMonitor.exe`.
             
-            **Note:** Requires [.NET 8.0 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) to be installed.
+            **No .NET installation required** - everything is included!
