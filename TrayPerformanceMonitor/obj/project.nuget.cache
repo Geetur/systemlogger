@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "EowxkOcxQrw=",
+  "dgSpecHash": "8gDddjx21Y0=",
   "success": true,
-  "projectFilePath": "c:\\Users\\JeterPontes\\Desktop\\capstone project\\TrayPerformanceMonitor\\TrayPerformanceMonitor.csproj",
+  "projectFilePath": "C:\\Users\\JeterPontes\\Desktop\\capstone project\\TrayPerformanceMonitor\\TrayPerformanceMonitor.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\JeterPontes\\.nuget\\packages\\llamasharp\\0.18.0\\llamasharp.0.18.0.nupkg.sha512",
     "C:\\Users\\JeterPontes\\.nuget\\packages\\llamasharp.backend.cpu\\0.18.0\\llamasharp.backend.cpu.0.18.0.nupkg.sha512",
