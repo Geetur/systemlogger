@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\JeterPontes\\Desktop\\capstone project\\TrayPerformanceMonitor\\TrayPerformanceMonitor.csproj": {}
+    "c:\\Users\\JeterPontes\\Desktop\\capstone project\\TrayPerformanceMonitor\\TrayPerformanceMonitor.csproj": {}
   },
   "projects": {
-    "C:\\Users\\JeterPontes\\Desktop\\capstone project\\TrayPerformanceMonitor\\TrayPerformanceMonitor.csproj": {
+    "c:\\Users\\JeterPontes\\Desktop\\capstone project\\TrayPerformanceMonitor\\TrayPerformanceMonitor.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\JeterPontes\\Desktop\\capstone project\\TrayPerformanceMonitor\\TrayPerformanceMonitor.csproj",
+        "projectUniqueName": "c:\\Users\\JeterPontes\\Desktop\\capstone project\\TrayPerformanceMonitor\\TrayPerformanceMonitor.csproj",
         "projectName": "TrayPerformanceMonitor",
-        "projectPath": "C:\\Users\\JeterPontes\\Desktop\\capstone project\\TrayPerformanceMonitor\\TrayPerformanceMonitor.csproj",
+        "projectPath": "c:\\Users\\JeterPontes\\Desktop\\capstone project\\TrayPerformanceMonitor\\TrayPerformanceMonitor.csproj",
         "packagesPath": "C:\\Users\\JeterPontes\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\JeterPontes\\Desktop\\capstone project\\TrayPerformanceMonitor\\obj\\",
+        "outputPath": "c:\\Users\\JeterPontes\\Desktop\\capstone project\\TrayPerformanceMonitor\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\JeterPontes\\AppData\\Roaming\\NuGet\\NuGet.Config"

@@ -90,7 +90,19 @@ namespace TrayPerformanceMonitor.Services
                 CleanupStaleProcessEntries();
             }
 
-            return FormatProcessList(processInfoList.OrderByDescending(p => p.UsageValue).Take(count), "{0:F1}%");
+            // Get top processes and normalize their percentages to sum to 100% max
+            var topProcesses = processInfoList.OrderByDescending(p => p.UsageValue).Take(count).ToList();
+            var totalUsage = topProcesses.Sum(p => p.UsageValue);
+            
+            // If total exceeds 100%, scale down proportionally
+            if (totalUsage > 100.0)
+            {
+                var scaleFactor = 100.0 / totalUsage;
+                topProcesses = topProcesses.Select(p => 
+                    new ProcessResourceInfo(p.ProcessName, p.ProcessId, p.UsageValue * scaleFactor)).ToList();
+            }
+
+            return FormatProcessList(topProcesses, "{0:F1}%");
         }
 
         /// <inheritdoc/>

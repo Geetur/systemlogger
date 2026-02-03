@@ -149,7 +149,7 @@ namespace TrayPerformanceMonitor
         {
             var icon = new NotifyIcon
             {
-                Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath),
+                Icon = LoadApplicationIcon(),
                 ContextMenuStrip = new ContextMenuStrip(),
                 Visible = true,
                 Text = AppConfiguration.ApplicationName
@@ -159,6 +159,31 @@ namespace TrayPerformanceMonitor
             icon.ContextMenuStrip.Items.Add("Exit", null, (_, _) => ExitApplication());
 
             return icon;
+        }
+
+        /// <summary>
+        /// Loads the application icon from embedded resources or falls back to the executable icon.
+        /// </summary>
+        /// <returns>The application icon.</returns>
+        private static Icon LoadApplicationIcon()
+        {
+            try
+            {
+                // Try to load from embedded resource
+                var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+                using var stream = assembly.GetManifestResourceStream("TrayPerformanceMonitor.app.ico");
+                if (stream != null)
+                {
+                    return new Icon(stream);
+                }
+            }
+            catch
+            {
+                // Fall back to executable icon
+            }
+
+            // Fallback: extract from executable
+            return Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? SystemIcons.Application;
         }
 
         /// <summary>

@@ -28,8 +28,8 @@ Compression=lzma2/ultra64
 SolidCompression=yes
 ; Installer appearance
 WizardStyle=modern
-; Note: Add SetupIconFile if you have a custom icon
-; SetupIconFile=..\TrayPerformanceMonitor\Resources\app.ico
+; Custom icon for installer and uninstaller
+SetupIconFile=..\TrayPerformanceMonitor\Resources\app.ico
 ; Privileges - per-user install by default
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
