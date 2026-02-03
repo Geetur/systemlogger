@@ -137,7 +137,7 @@ begin
   AIModelCombo.Width := 400;
   AIModelCombo.Style := csDropDownList;
   AIModelCombo.Items.Add('Full Model - TinyLlama 1.1B (~640 MB) - Best quality');
-  AIModelCombo.Items.Add('Lite Model - SmolLM 135M (~100 MB) - Faster, smaller');
+  AIModelCombo.Items.Add('Lite Model - Qwen2 0.5B (~400 MB) - Faster, smaller');
   AIModelCombo.ItemIndex := 0;
 
   // No AI Checkbox
