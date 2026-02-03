@@ -1,16 +1,35 @@
 # TrayPerformanceMonitor AI Model Download Script
-# Downloads the TinyLlama model for AI-powered spike analysis
+# Downloads the selected AI model for spike analysis
 
 param(
     [Parameter(Mandatory=$true)]
-    [string]$DestinationPath
+    [string]$DestinationPath,
+    
+    [Parameter(Mandatory=$false)]
+    [ValidateSet("full", "lite")]
+    [string]$ModelType = "full"
 )
 
 $ErrorActionPreference = "Stop"
 $host.UI.RawUI.WindowTitle = "TrayPerformanceMonitor - AI Model Download"
 
-# Model URL - TinyLlama 1.1B Chat (Q4_K_M quantization - good balance of size/quality)
-$ModelUrl = "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
+# Model configurations
+$Models = @{
+    "full" = @{
+        Name = "TinyLlama 1.1B (Q4_K_M)"
+        Size = "~640 MB"
+        Url = "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
+        MinSize = 500MB
+    }
+    "lite" = @{
+        Name = "SmolLM 135M (Q8_0)"
+        Size = "~150 MB"
+        Url = "https://huggingface.co/bartowski/SmolLM-135M-Instruct-GGUF/resolve/main/SmolLM-135M-Instruct-Q8_0.gguf"
+        MinSize = 100MB
+    }
+}
+
+$SelectedModel = $Models[$ModelType]
 
 Clear-Host
 Write-Host ""
@@ -29,7 +48,7 @@ if (-not (Test-Path $DestDir)) {
 # Check if model already exists
 if (Test-Path $DestinationPath) {
     $existingFile = Get-Item $DestinationPath
-    if ($existingFile.Length -gt 100MB) {
+    if ($existingFile.Length -gt $SelectedModel.MinSize) {
         Write-Host "  AI model already exists!" -ForegroundColor Green
         Write-Host "  Location: $DestinationPath"
         Write-Host "  Size: $([math]::Round($existingFile.Length / 1MB, 2)) MB"
@@ -38,13 +57,14 @@ if (Test-Path $DestinationPath) {
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         exit 0
     } else {
-        Write-Host "  Existing file appears incomplete. Re-downloading..." -ForegroundColor Yellow
+        Write-Host "  Existing file appears incomplete or is a different model." -ForegroundColor Yellow
+        Write-Host "  Re-downloading..." -ForegroundColor Yellow
         Remove-Item $DestinationPath -Force
     }
 }
 
-Write-Host "  Model: TinyLlama 1.1B (Q4_K_M)" -ForegroundColor White
-Write-Host "  Size:  ~640 MB" -ForegroundColor White
+Write-Host "  Model: $($SelectedModel.Name)" -ForegroundColor White
+Write-Host "  Size:  $($SelectedModel.Size)" -ForegroundColor White
 Write-Host "  From:  HuggingFace" -ForegroundColor White
 Write-Host ""
 Write-Host "  Downloading... Please wait." -ForegroundColor Yellow
@@ -57,12 +77,12 @@ try {
     $ProgressPreference = 'Continue'
     
     # Download with built-in progress bar
-    Invoke-WebRequest -Uri $ModelUrl -OutFile $TempPath -UseBasicParsing
+    Invoke-WebRequest -Uri $SelectedModel.Url -OutFile $TempPath -UseBasicParsing
     
     # Verify download
     if (Test-Path $TempPath) {
         $downloadedFile = Get-Item $TempPath
-        if ($downloadedFile.Length -gt 100MB) {
+        if ($downloadedFile.Length -gt $SelectedModel.MinSize) {
             # Move to final location
             Move-Item -Path $TempPath -Destination $DestinationPath -Force
             
@@ -71,7 +91,8 @@ try {
             Write-Host "   Download Complete!" -ForegroundColor Green
             Write-Host "  ============================================" -ForegroundColor Green
             Write-Host ""
-            Write-Host "  Model saved to:" -ForegroundColor White
+            Write-Host "  Model: $($SelectedModel.Name)" -ForegroundColor White
+            Write-Host "  Saved to:" -ForegroundColor White
             Write-Host "  $DestinationPath" -ForegroundColor Gray
             Write-Host ""
             Write-Host "  Size: $([math]::Round((Get-Item $DestinationPath).Length / 1MB, 2)) MB" -ForegroundColor White
@@ -89,6 +110,11 @@ try {
     }
 }
 catch {
+    # Clean up temp file if it exists
+    if (Test-Path $TempPath) {
+        Remove-Item $TempPath -Force -ErrorAction SilentlyContinue
+    }
+    
     Write-Host ""
     Write-Host "  ============================================" -ForegroundColor Red
     Write-Host "   Download Failed" -ForegroundColor Red
@@ -98,20 +124,11 @@ catch {
     Write-Host ""
     Write-Host "  You can download the model manually:" -ForegroundColor Yellow
     Write-Host ""
-    Write-Host "  1. Go to:" -ForegroundColor White
-    Write-Host "     https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF" -ForegroundColor Cyan
+    Write-Host "  1. Visit: $($SelectedModel.Url)" -ForegroundColor White
     Write-Host ""
-    Write-Host "  2. Download: tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf" -ForegroundColor White
+    Write-Host "  2. Save the file as:" -ForegroundColor White
+    Write-Host "     $DestinationPath" -ForegroundColor Gray
     Write-Host ""
-    Write-Host "  3. Rename to 'model.gguf' and place in:" -ForegroundColor White
-    Write-Host "     $DestDir" -ForegroundColor Cyan
-    Write-Host ""
-    
-    # Cleanup temp file if exists
-    if (Test-Path "$DestinationPath.download") {
-        Remove-Item "$DestinationPath.download" -Force -ErrorAction SilentlyContinue
-    }
-    
     Write-Host "  Press any key to close..." -ForegroundColor Gray
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     exit 1
