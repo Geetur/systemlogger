@@ -45,20 +45,37 @@ if (-not (Test-Path $DestDir)) {
     New-Item -ItemType Directory -Path $DestDir -Force | Out-Null
 }
 
-# Check if model already exists
+# Check if model already exists and is the correct type
 if (Test-Path $DestinationPath) {
     $existingFile = Get-Item $DestinationPath
-    if ($existingFile.Length -gt $SelectedModel.MinSize) {
+    $existingSize = $existingFile.Length
+    
+    # Determine if the existing model matches the requested type
+    # Full model: 500MB - 800MB, Lite model: 100MB - 300MB
+    $isFullModel = $existingSize -gt 400MB
+    $isLiteModel = $existingSize -gt 80MB -and $existingSize -lt 400MB
+    
+    $correctModelExists = ($ModelType -eq "full" -and $isFullModel) -or ($ModelType -eq "lite" -and $isLiteModel)
+    
+    if ($correctModelExists) {
         Write-Host "  AI model already exists!" -ForegroundColor Green
+        Write-Host "  Model: $($SelectedModel.Name)" -ForegroundColor White
         Write-Host "  Location: $DestinationPath"
-        Write-Host "  Size: $([math]::Round($existingFile.Length / 1MB, 2)) MB"
+        Write-Host "  Size: $([math]::Round($existingSize / 1MB, 2)) MB"
         Write-Host ""
         Write-Host "  Press any key to close..." -ForegroundColor Gray
         $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
         exit 0
     } else {
-        Write-Host "  Existing file appears incomplete or is a different model." -ForegroundColor Yellow
-        Write-Host "  Re-downloading..." -ForegroundColor Yellow
+        if ($isFullModel -or $isLiteModel) {
+            Write-Host "  A different model type is installed." -ForegroundColor Yellow
+            Write-Host "  Current: $(if ($isFullModel) { 'Full Model' } else { 'Lite Model' })" -ForegroundColor Yellow
+            Write-Host "  Requested: $(if ($ModelType -eq 'full') { 'Full Model' } else { 'Lite Model' })" -ForegroundColor Yellow
+        } else {
+            Write-Host "  Existing file appears incomplete." -ForegroundColor Yellow
+        }
+        Write-Host "  Replacing with requested model..." -ForegroundColor Yellow
+        Write-Host ""
         Remove-Item $DestinationPath -Force
     }
 }
