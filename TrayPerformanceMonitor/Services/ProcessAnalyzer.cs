@@ -64,7 +64,7 @@ namespace TrayPerformanceMonitor.Services
                         var cpuTimeDelta = currentCpuTime - previousCpuTime;
                         var cpuPercentage = (cpuTimeDelta.TotalSeconds / (elapsedSeconds * Environment.ProcessorCount)) * 100.0;
 
-                        // Clamp to non-negative values
+                        // Clamp to non-negative values (normalization happens later to preserve ratios)
                         cpuPercentage = Math.Max(0, cpuPercentage);
 
                         processInfoList.Add(new ProcessResourceInfo(processName, processId, cpuPercentage));
@@ -90,14 +90,14 @@ namespace TrayPerformanceMonitor.Services
                 CleanupStaleProcessEntries();
             }
 
-            // Get top processes and normalize their percentages to sum to 100% max
+            // Get top processes and normalize to keep values within 0-100% while preserving ratios
             var topProcesses = processInfoList.OrderByDescending(p => p.UsageValue).Take(count).ToList();
-            var totalUsage = topProcesses.Sum(p => p.UsageValue);
             
-            // If total exceeds 100%, scale down proportionally
-            if (totalUsage > 100.0)
+            // Find the maximum value - if any exceeds 100%, scale ALL down proportionally
+            var maxUsage = topProcesses.Max(p => p.UsageValue);
+            if (maxUsage > 100.0)
             {
-                var scaleFactor = 100.0 / totalUsage;
+                var scaleFactor = 100.0 / maxUsage;
                 topProcesses = topProcesses.Select(p => 
                     new ProcessResourceInfo(p.ProcessName, p.ProcessId, p.UsageValue * scaleFactor)).ToList();
             }
