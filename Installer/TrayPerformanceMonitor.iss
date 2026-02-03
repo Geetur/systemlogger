@@ -3,7 +3,7 @@
 
 #define MyAppName "TrayPerformanceMonitor"
 #define MyAppVersion "1.0.0"
-#define MyAppPublisher "Outback Construction Inc."
+#define MyAppPublisher "Jeter Pontes"
 #define MyAppURL "https://github.com/Geetur/systemlogger"
 #define MyAppExeName "TrayPerformanceMonitor.exe"
 
@@ -61,8 +61,8 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: """{app}\{#MyAppExeName}"""; Flags: uninsdeletevalue; Tasks: startupicon
 
 [Run]
-; Download AI model if selected
-Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\Scripts\DownloadModel.ps1"" -DestinationPath ""{app}\Models\model.gguf"""; StatusMsg: "Downloading AI model (this may take a few minutes)..."; Flags: runhidden; Tasks: downloadai
+; Download AI model if selected - runs in visible window so user sees progress
+Filename: "powershell.exe"; Parameters: "-ExecutionPolicy Bypass -File ""{app}\Scripts\DownloadModel.ps1"" -DestinationPath ""{app}\Models\model.gguf"""; Description: "Download AI Model (~640 MB)"; Flags: postinstall skipifsilent shellexec; Tasks: downloadai
 ; Launch application after install
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
