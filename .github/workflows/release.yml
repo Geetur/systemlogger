@@ -1,5 +1,5 @@
 # Release Pipeline for TrayPerformanceMonitor
-# Creates GitHub releases with built artifacts when tags are pushed
+# Creates GitHub releases with installer when tags are pushed
 
 name: Release
 
@@ -35,35 +35,53 @@ jobs:
       - name: Run tests
         run: dotnet test "capstone project.sln" --configuration Release --verbosity normal
 
-      - name: Publish Framework-Dependent
+      - name: Publish Application
         run: |
           dotnet publish TrayPerformanceMonitor/TrayPerformanceMonitor.csproj `
             --configuration Release `
-            --output ./publish/framework-dependent `
-            --self-contained false `
-            -p:PublishSingleFile=true
+            --output ./publish `
+            --self-contained false
 
-      - name: Publish Self-Contained
+      - name: Install Inno Setup
         run: |
-          dotnet publish TrayPerformanceMonitor/TrayPerformanceMonitor.csproj `
-            --configuration Release `
-            --output ./publish/self-contained `
-            --self-contained true `
-            --runtime win-x64 `
-            -p:PublishSingleFile=true `
-            -p:IncludeNativeLibrariesForSelfExtract=true
+          choco install innosetup -y --no-progress
+        shell: powershell
 
-      - name: Create zip archives
+      - name: Update version in installer script
         run: |
-          Compress-Archive -Path ./publish/framework-dependent/* -DestinationPath ./TrayPerformanceMonitor-${{ github.ref_name }}-framework-dependent.zip
-          Compress-Archive -Path ./publish/self-contained/* -DestinationPath ./TrayPerformanceMonitor-${{ github.ref_name }}-win-x64.zip
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $issFile = "Installer/TrayPerformanceMonitor.iss"
+          (Get-Content $issFile) -replace '#define MyAppVersion ".*"', "#define MyAppVersion `"$version`"" | Set-Content $issFile
+        shell: powershell
+
+      - name: Build Installer
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" "Installer\TrayPerformanceMonitor.iss"
+        shell: powershell
+
+      - name: Create portable zip
+        run: |
+          Compress-Archive -Path ./publish/* -DestinationPath ./TrayPerformanceMonitor-${{ github.ref_name }}-portable.zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            ./TrayPerformanceMonitor-${{ github.ref_name }}-framework-dependent.zip
-            ./TrayPerformanceMonitor-${{ github.ref_name }}-win-x64.zip
+            ./Installer/Output/TrayPerformanceMonitor_Setup_*.exe
+            ./TrayPerformanceMonitor-${{ github.ref_name }}-portable.zip
           generate_release_notes: true
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
+          body: |
+            ## Installation
+            
+            ### Recommended: Use the Installer
+            Download `TrayPerformanceMonitor_Setup_x.x.x.exe` and run it. The installer will:
+            - Install the application
+            - Optionally add to Windows startup
+            - Optionally download the AI model for intelligent spike analysis
+            
+            ### Portable Version
+            Download `TrayPerformanceMonitor-${{ github.ref_name }}-portable.zip`, extract anywhere, and run `TrayPerformanceMonitor.exe`.
+            
+            **Note:** Requires [.NET 8.0 Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) to be installed.
