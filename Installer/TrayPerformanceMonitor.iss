@@ -36,6 +36,10 @@ PrivilegesRequiredOverridesAllowed=dialog
 ; Uninstaller
 UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName}
+; Close running application
+CloseApplications=force
+CloseApplicationsFilter=*.exe
+RestartApplications=no
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -86,6 +90,53 @@ var
   ProcessCountLabel: TNewStaticText;
   AIModelLabel: TNewStaticText;
   AIInfoLabel: TNewStaticText;
+
+// Function to kill the running application process
+function KillProcess(ProcessName: String): Boolean;
+var
+  ResultCode: Integer;
+begin
+  // Use taskkill to forcefully terminate the process
+  Result := Exec('taskkill.exe', '/F /IM "' + ProcessName + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+end;
+
+// Check if the application is running
+function IsAppRunning(ProcessName: String): Boolean;
+var
+  ResultCode: Integer;
+begin
+  // Use tasklist to check if process exists (returns 0 if found)
+  Exec('cmd.exe', '/c tasklist /FI "IMAGENAME eq ' + ProcessName + '" | find /i "' + ProcessName + '"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Result := (ResultCode = 0);
+end;
+
+// Called before installation starts
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ProcessName: String;
+begin
+  Result := '';
+  NeedsRestart := False;
+  ProcessName := '{#MyAppExeName}';
+  
+  // Check if application is running and kill it
+  if IsAppRunning(ProcessName) then
+  begin
+    Log('TrayPerformanceMonitor is running, attempting to close...');
+    KillProcess(ProcessName);
+    // Give it a moment to fully close
+    Sleep(1000);
+    
+    // Verify it's closed
+    if IsAppRunning(ProcessName) then
+    begin
+      Log('Warning: Application may still be running');
+      // Try once more with a longer wait
+      KillProcess(ProcessName);
+      Sleep(2000);
+    end;
+  end;
+end;
 
 procedure InitializeWizard;
 var
