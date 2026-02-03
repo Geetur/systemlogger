@@ -52,7 +52,7 @@ Every IT department hears this daily. But by the time a technician investigates,
 - Configurable thresholds (default: 80%)
 - Sustained spike tracking (10+ seconds)
 - Automatic process identification
-- Top 3 resource-consuming processes
+- **Configurable process count (1-10)**
 
 </td>
 </tr>
@@ -60,8 +60,8 @@ Every IT department hears this daily. But by the time a technician investigates,
 <td width="50%">
 
 ### 🤖 AI-Powered Analysis
-- Local LLaMA model (TinyLlama 1.1B)
-- No internet required
+- **Choose your model**: Full (640 MB) or Lite (320 MB)
+- No internet required after download
 - Privacy-first: data never leaves your machine
 - Actionable recommendations
 
@@ -72,7 +72,7 @@ Every IT department hears this daily. But by the time a technician investigates,
 - Desktop log file for easy access
 - Daily headers for organization
 - Automatic 7-day retention
-- Human-readable format
+- **Single-instance enforcement** (mutex)
 
 </td>
 </tr>
@@ -95,8 +95,9 @@ Every IT department hears this daily. But by the time a technician investigates,
 1. Download `TrayPerformanceMonitor_Setup_x.x.x.exe` from [Releases](https://github.com/Geetur/systemlogger/releases/latest)
 2. Run the installer
 3. Choose your options:
+   - 🔢 **Process count (1-10)** — How many top processes to log per spike
+   - 🤖 **AI Model** — Full (~640 MB, best quality) or Lite (~320 MB, faster)
    - ✅ **Start with Windows** — Launch automatically on login
-   - ☐ **Download AI Model** — Enable intelligent spike analysis (~640 MB)
 4. Done! The app appears in your system tray.
 
 ### Option 2: Portable Version
@@ -169,24 +170,53 @@ All settings are in `Configuration/AppConfiguration.cs`:
 | `TopProcessCount` | Number of top processes to log | `3` |
 | `AiSummaryEnabled` | Enable AI analysis | `true` |
 
+### User Settings (via Installer or settings.json)
+
+| Setting | Description | Range |
+|---------|-------------|-------|
+| `TopProcessCount` | Processes logged per spike | `1-10` |
+
+The installer creates a `settings.json` file with your chosen configuration:
+```json
+{
+  "TopProcessCount": 5
+}
+```
+
+> 💡 **Single Instance:** The app uses a mutex to ensure only one instance runs at a time. If you try to launch it again, you'll see a notification.
+
 ---
 
 ## 🤖 AI Model Setup (Optional)
 
-The AI feature uses a **local** TinyLlama model — your data never leaves your computer.
+The AI feature uses **local** models — your data never leaves your computer.
+
+### Model Options
+
+| Model | Size | Quality | Best For |
+|-------|------|---------|----------|
+| **Full** (TinyLlama 1.1B) | ~640 MB | ⭐⭐⭐ Best | Detailed analysis, complex recommendations |
+| **Lite** (Qwen2 0.5B) | ~320 MB | ⭐⭐ Good | Faster responses, lower RAM usage |
 
 ### Automatic (During Installation)
-Check "Download AI Model" in the installer. Done!
+Select your preferred model in the installer configuration page. Done!
 
 ### Manual Download
+
+**Full Model:**
 1. Download [TinyLlama 1.1B GGUF](https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf) (~640 MB)
+
+**Lite Model:**
+1. Download [Qwen2 0.5B GGUF](https://huggingface.co/Qwen/Qwen2-0.5B-Instruct-GGUF/resolve/main/qwen2-0_5b-instruct-q2_k.gguf) (~320 MB)
+
+**Then:**
 2. Rename to `model.gguf`
 3. Place in one of:
    - `%INSTALL_DIR%\Models\model.gguf`
    - Your Desktop
    - Your Documents folder
 
-> **Why isn't the model included?** GitHub has a 100MB file limit. The ~640MB model must be downloaded separately.
+> **Why isn't the model included?** GitHub has a 100MB file limit. The model must be downloaded separately.
 
 ---
 
