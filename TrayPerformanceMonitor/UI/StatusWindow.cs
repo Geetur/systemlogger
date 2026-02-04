@@ -34,8 +34,9 @@ namespace TrayPerformanceMonitor.UI
         /// </summary>
         /// <param name="onShowPerformance">Action to execute when "Show Performance" is clicked.</param>
         /// <param name="onExit">Action to execute when "Exit" is clicked.</param>
+        /// <param name="onSettings">Action to execute when "Settings" is clicked. Can be null if not supported.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="onShowPerformance"/> or <paramref name="onExit"/> is null.</exception>
-        public StatusWindow(Action onShowPerformance, Action onExit)
+        public StatusWindow(Action onShowPerformance, Action onExit, Action? onSettings = null)
         {
             ArgumentNullException.ThrowIfNull(onShowPerformance);
             ArgumentNullException.ThrowIfNull(onExit);
@@ -43,7 +44,7 @@ namespace TrayPerformanceMonitor.UI
             InitializeWindowProperties();
             (_cpuLabel, _ramLabel) = CreateLabels();
             SetWindowPosition();
-            SetupContextMenu(onShowPerformance, onExit);
+            SetupContextMenu(onShowPerformance, onExit, onSettings);
             _keepPinnedTimer = SetupKeepPinnedTimer();
         }
 
@@ -99,11 +100,23 @@ namespace TrayPerformanceMonitor.UI
         }
 
         /// <summary>
+        /// Gets or sets a value indicating whether pinning should be temporarily suspended.
+        /// Used when modal dialogs are open to prevent focus stealing.
+        /// </summary>
+        public bool SuspendPinning { get; set; }
+
+        /// <summary>
         /// Ensures the window remains visible and on top without stealing focus.
         /// </summary>
         public void EnsurePinned()
         {
-            if (_disposed || IsDisposed)
+            if (_disposed || IsDisposed || SuspendPinning)
+            {
+                return;
+            }
+
+            // Don't pin if there's a modal dialog open (like settings)
+            if (Application.OpenForms.Cast<Form>().Any(f => f.Modal && f.Visible))
             {
                 return;
             }
@@ -294,12 +307,21 @@ namespace TrayPerformanceMonitor.UI
         /// </summary>
         /// <param name="onShowPerformance">Action for the "Show Performance" menu item.</param>
         /// <param name="onExit">Action for the "Exit" menu item.</param>
-        private void SetupContextMenu(Action onShowPerformance, Action onExit)
+        /// <param name="onSettings">Action for the "Settings" menu item. Can be null.</param>
+        private void SetupContextMenu(Action onShowPerformance, Action onExit, Action? onSettings)
         {
             var contextMenu = new ContextMenuStrip();
 
             var showMenuItem = contextMenu.Items.Add("Show Performance");
             showMenuItem.Click += (_, _) => onShowPerformance();
+
+            if (onSettings != null)
+            {
+                var settingsMenuItem = contextMenu.Items.Add("Settings");
+                settingsMenuItem.Click += (_, _) => onSettings();
+            }
+
+            contextMenu.Items.Add(new ToolStripSeparator());
 
             var exitMenuItem = contextMenu.Items.Add("Exit");
             exitMenuItem.Click += (_, _) => onExit();

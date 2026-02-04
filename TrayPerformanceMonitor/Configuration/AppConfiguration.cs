@@ -81,14 +81,16 @@ namespace TrayPerformanceMonitor.Configuration
 
         /// <summary>
         /// Gets the maximum number of tokens the AI can generate per response.
+        /// Increased to allow for more detailed, user-friendly explanations.
         /// </summary>
-        public const int AiMaxTokens = 150;
+        public const int AiMaxTokens = 400;
 
         /// <summary>
         /// Gets the timeout in seconds for AI inference.
         /// If the AI takes longer than this, it will be cancelled.
+        /// Increased to allow for more complete responses on slower hardware.
         /// </summary>
-        public const int AiTimeoutSeconds = 30;
+        public const int AiTimeoutSeconds = 60;
 
         /// <summary>
         /// Gets whether AI summaries are enabled by default.

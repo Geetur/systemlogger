@@ -32,16 +32,38 @@ namespace TrayPerformanceMonitor.Services
         private LLamaWeights? _model;
         private LLamaContext? _context;
         private bool _disposed;
+        private string _currentModelType = "full"; // Tracks current model type for prompt formatting
 
         /// <summary>
         /// The system prompt that instructs the AI on how to respond.
+        /// This is the enhanced prompt designed for detailed, user-friendly output.
         /// </summary>
         private const string SystemPrompt = """
-            You are a helpful system performance assistant. When given information about a performance spike (high CPU or RAM usage), 
-            provide a brief 2-3 sentence summary explaining the likely cause and 2-3 actionable next steps. 
-            Be concise and practical. Focus on the top processes shown.
-            """;
+            You are a friendly Windows PC performance expert helping everyday users understand why their computer is running slow. Your job is to analyze performance spikes and explain them in simple, non-technical language that anyone can understand.
 
+            IMPORTANT GUIDELINES:
+            1. NEVER use technical jargon (avoid terms like "PID", "thread", "memory leak", "CPU cycles")
+            2. Use the actual application NAMES, not process file names (e.g., say "Google Chrome" not "chrome.exe")
+            3. Explain what each problematic app actually does and why it might be using resources
+            4. Give specific, actionable steps that a non-technical person can follow
+            5. Be encouraging and reassuring - don't make the user feel like something is seriously wrong
+            6. Use bullet points for easy reading
+            7. If a browser is the issue, mention that having many tabs open is often the cause
+
+            YOUR RESPONSE FORMAT:
+            📋 What's Happening:
+            [1-2 sentences explaining the situation in plain English]
+
+            🔍 The Main Culprits:
+            [List the top apps causing the issue with brief explanations]
+
+            ✅ What You Can Do:
+            [3-4 simple action steps anyone can follow]
+
+            💡 Quick Tip:
+            [One helpful tip to prevent this in the future]
+            """;
+    
         /// <inheritdoc/>
         public bool IsModelLoaded => _model != null && _context != null;
 
@@ -66,13 +88,23 @@ namespace TrayPerformanceMonitor.Services
                     _context?.Dispose();
                     _model?.Dispose();
 
+                    // Detect model type based on file size
+                    var fileInfo = new FileInfo(modelPath);
+                    var sizeInMB = fileInfo.Length / (1024.0 * 1024.0);
+                    _currentModelType = sizeInMB > 400 ? "full" : "lite";
+
                     // Configure model parameters for efficient CPU inference
+                    // Adjust context size based on model type - lite models work better with smaller context
+                    var contextSize = _currentModelType == "lite" 
+                        ? Math.Min(AppConfiguration.AiContextSize, 1024u) 
+                        : AppConfiguration.AiContextSize;
+
                     var parameters = new ModelParams(modelPath)
                     {
-                        ContextSize = AppConfiguration.AiContextSize,
+                        ContextSize = contextSize,
                         GpuLayerCount = 0, // CPU only for laptop compatibility
                         Threads = Math.Max(1, Environment.ProcessorCount / 2), // Use half the cores
-                        BatchSize = 512
+                        BatchSize = _currentModelType == "lite" ? 256u : 512u
                     };
 
                     _model = LLamaWeights.LoadFromFile(parameters);
@@ -140,10 +172,21 @@ namespace TrayPerformanceMonitor.Services
 
                         var executor = new StatelessExecutor(_model!, _context.Params);
                         
+                        // Adjust inference parameters based on model type
+                        // Lite models need different anti-prompts for ChatML format
+                        var antiPrompts = _currentModelType == "lite"
+                            ? new List<string> { "<|im_end|>", "<|im_start|>", "\n\n\n" }
+                            : new List<string> { "</s>", "<|user|>", "<|system|>", "\n\n\n" };
+
+                        // Increase max tokens to allow for detailed responses
+                        var maxTokens = _currentModelType == "lite" 
+                            ? Math.Min(AppConfiguration.AiMaxTokens, 200) 
+                            : Math.Max(AppConfiguration.AiMaxTokens, 300);
+
                         var inferenceParams = new InferenceParams
                         {
-                            MaxTokens = AppConfiguration.AiMaxTokens,
-                            AntiPrompts = new List<string> { "\n\n", "User:", "Human:", "###" },
+                            MaxTokens = maxTokens,
+                            AntiPrompts = antiPrompts,
                             SamplingPipeline = new DefaultSamplingPipeline
                             {
                                 Temperature = 0.7f
@@ -161,8 +204,9 @@ namespace TrayPerformanceMonitor.Services
 
                             result.Append(text);
 
-                            // Stop if we've generated enough
-                            if (result.Length > 500)
+                            // Stop if we've generated enough content
+                            // Allow more content for better responses
+                            if (result.Length > 1500)
                             {
                                 break;
                             }
@@ -188,26 +232,147 @@ namespace TrayPerformanceMonitor.Services
         }
 
         /// <summary>
-        /// Builds the prompt for the AI model.
+        /// Builds the prompt for the AI model, using the appropriate format for the model type.
         /// </summary>
-        private static string BuildPrompt(string metricName, float value, string topProcessesInfo)
+        private string BuildPrompt(string metricName, float value, string topProcessesInfo)
         {
-            return $"""
-                {SystemPrompt}
+            // Parse process info to make it more user-friendly
+            var friendlyProcessInfo = FormatProcessInfoForUser(topProcessesInfo);
+            
+            var userMessage = $"""
+                My computer's {metricName} usage just spiked to {value:F0}% and stayed high for over {AppConfiguration.SpikeTimeThresholdSeconds} seconds.
 
-                Performance Alert:
-                - {metricName} usage: {value:F1}%
-                - Duration: Sustained for {AppConfiguration.SpikeTimeThresholdSeconds}+ seconds
-                
-                Top {metricName}-consuming processes:
-                {topProcessesInfo}
+                Here are the applications using the most {metricName}:
+                {friendlyProcessInfo}
 
-                Provide a brief summary and recommended next steps:
+                Please help me understand what's happening and what I should do about it.
                 """;
+
+            // Use different prompt formats based on model type
+            // Qwen2 (lite) uses ChatML format, TinyLlama (full) uses Llama format
+            if (_currentModelType == "lite")
+            {
+                // ChatML format for Qwen2
+                return $"""
+                    <|im_start|>system
+                    {SystemPrompt}<|im_end|>
+                    <|im_start|>user
+                    {userMessage}<|im_end|>
+                    <|im_start|>assistant
+                    """;
+            }
+            else
+            {
+                // Llama/TinyLlama format
+                return $"""
+                    <|system|>
+                    {SystemPrompt}</s>
+                    <|user|>
+                    {userMessage}</s>
+                    <|assistant|>
+                    """;
+            }
         }
 
         /// <summary>
-        /// Cleans up the AI response by removing artifacts and trimming.
+        /// Formats process information to be more user-friendly by converting process names to app names.
+        /// </summary>
+        private static string FormatProcessInfoForUser(string topProcessesInfo)
+        {
+            if (string.IsNullOrWhiteSpace(topProcessesInfo))
+            {
+                return "No specific applications identified";
+            }
+
+            // Common process name to friendly name mappings
+            var friendlyNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                { "chrome", "Google Chrome (web browser)" },
+                { "firefox", "Mozilla Firefox (web browser)" },
+                { "msedge", "Microsoft Edge (web browser)" },
+                { "brave", "Brave Browser (web browser)" },
+                { "opera", "Opera Browser (web browser)" },
+                { "iexplore", "Internet Explorer (web browser)" },
+                { "code", "Visual Studio Code (code editor)" },
+                { "devenv", "Visual Studio (development environment)" },
+                { "teams", "Microsoft Teams (chat & meetings)" },
+                { "slack", "Slack (team messaging)" },
+                { "discord", "Discord (chat & gaming)" },
+                { "zoom", "Zoom (video meetings)" },
+                { "spotify", "Spotify (music streaming)" },
+                { "explorer", "Windows Explorer (file manager)" },
+                { "searchhost", "Windows Search (file indexing)" },
+                { "searchindexer", "Windows Search Indexer (file indexing)" },
+                { "antimalware", "Windows Defender (antivirus scanning)" },
+                { "msmpeng", "Windows Defender Antivirus (security scanning)" },
+                { "windowsdefender", "Windows Defender (security)" },
+                { "onedrive", "OneDrive (cloud storage sync)" },
+                { "dropbox", "Dropbox (cloud storage sync)" },
+                { "outlook", "Microsoft Outlook (email)" },
+                { "word", "Microsoft Word (document editing)" },
+                { "excel", "Microsoft Excel (spreadsheets)" },
+                { "powerpoint", "Microsoft PowerPoint (presentations)" },
+                { "photoshop", "Adobe Photoshop (image editing)" },
+                { "premiere", "Adobe Premiere (video editing)" },
+                { "aftereffects", "Adobe After Effects (motion graphics)" },
+                { "acrobat", "Adobe Acrobat (PDF reader)" },
+                { "steam", "Steam (gaming platform)" },
+                { "epicgames", "Epic Games Launcher (gaming platform)" },
+                { "origin", "EA Origin (gaming platform)" },
+                { "battle.net", "Battle.net (gaming platform)" },
+                { "nvidia", "NVIDIA Driver/Software (graphics)" },
+                { "amd", "AMD Driver/Software (graphics)" },
+                { "dwm", "Desktop Window Manager (Windows graphics)" },
+                { "svchost", "Windows System Service" },
+                { "system", "Windows System Process" },
+                { "wuauserv", "Windows Update Service" },
+                { "node", "Node.js (JavaScript runtime)" },
+                { "python", "Python (programming language)" },
+                { "java", "Java Application" },
+                { "sqlserver", "SQL Server (database)" },
+                { "mysqld", "MySQL (database)" },
+                { "postgres", "PostgreSQL (database)" },
+                { "docker", "Docker (container platform)" },
+                { "vmware", "VMware (virtual machine)" },
+                { "virtualbox", "VirtualBox (virtual machine)" },
+                { "obs", "OBS Studio (streaming/recording)" },
+                { "vlc", "VLC Media Player (video player)" },
+                { "itunes", "iTunes (media player)" },
+                { "thunderbird", "Mozilla Thunderbird (email)" },
+                { "notepad++", "Notepad++ (text editor)" },
+                { "winrar", "WinRAR (file compression)" },
+                { "7zfm", "7-Zip (file compression)" }
+            };
+
+            var lines = topProcessesInfo.Split('\n', '\r');
+            var result = new System.Text.StringBuilder();
+
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    continue;
+                }
+
+                var friendlyLine = line;
+                foreach (var mapping in friendlyNames)
+                {
+                    if (line.Contains(mapping.Key, StringComparison.OrdinalIgnoreCase))
+                    {
+                        // Try to extract the percentage or usage info and append it to the friendly name
+                        friendlyLine = line.Replace(mapping.Key, mapping.Value, StringComparison.OrdinalIgnoreCase);
+                        break;
+                    }
+                }
+                result.Append(System.Globalization.CultureInfo.InvariantCulture, $"• {friendlyLine.Trim()}");
+                result.AppendLine();
+            }
+
+            return result.ToString().Trim();
+        }
+
+        /// <summary>
+        /// Cleans up the AI response by removing artifacts, chat tokens, and trimming.
         /// </summary>
         private static string CleanupResponse(string response)
         {
@@ -216,17 +381,47 @@ namespace TrayPerformanceMonitor.Services
                 return string.Empty;
             }
 
-            // Remove common AI artifacts
+            // Remove ChatML tokens (for Qwen2/lite model)
+            response = response
+                .Replace("<|im_start|>", "")
+                .Replace("<|im_end|>", "")
+                .Replace("<|im_sep|>", "");
+
+            // Remove Llama tokens (for TinyLlama/full model)
+            response = response
+                .Replace("<|system|>", "")
+                .Replace("<|user|>", "")
+                .Replace("<|assistant|>", "")
+                .Replace("</s>", "")
+                .Replace("<s>", "");
+
+            // Remove common AI artifacts and labels
             response = response
                 .Replace("Assistant:", "")
                 .Replace("AI:", "")
+                .Replace("assistant", "")
+                .Replace("system", "")
+                .Replace("user", "")
                 .Trim();
 
-            // Take only the first meaningful paragraph if response is too long
-            var lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
-            if (lines.Length > 6)
+            // Remove any lines that are just whitespace or very short (likely artifacts)
+            var lines = response.Split('\n')
+                .Where(line => !string.IsNullOrWhiteSpace(line) && line.Trim().Length > 2)
+                .ToList();
+
+            // Keep a reasonable number of lines for the formatted response
+            // Allow more lines since we're using a structured format with sections
+            if (lines.Count > 20)
             {
-                response = string.Join("\n", lines.Take(6));
+                lines = lines.Take(20).ToList();
+            }
+
+            response = string.Join("\n", lines).Trim();
+
+            // If response is empty after cleanup, return empty
+            if (string.IsNullOrWhiteSpace(response))
+            {
+                return string.Empty;
             }
 
             return response;

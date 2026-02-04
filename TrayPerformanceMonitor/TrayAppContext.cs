@@ -31,7 +31,7 @@ namespace TrayPerformanceMonitor
         private readonly IPerformanceService _performanceService;
         private readonly ILoggingService _loggingService;
         private readonly IProcessAnalyzer _processAnalyzer;
-        private readonly IAiSummaryService? _aiSummaryService;
+        private IAiSummaryService? _aiSummaryService;
 
         private readonly SpikeTracker _cpuSpikeTracker;
         private readonly SpikeTracker _ramSpikeTracker;
@@ -61,24 +61,42 @@ namespace TrayPerformanceMonitor
             }
 #pragma warning restore CS0162
 
+            // Migrate legacy model.gguf to new naming scheme if needed
+            UserSettings.MigrateLegacyModel();
+
             var aiService = new AiSummaryService();
 
-            // Try to find and load the model from common locations
-            var modelPaths = new[]
+            // First, try to load the user's selected model type
+            var selectedModelPath = UserSettings.GetActiveModelFilePath();
+            if (File.Exists(selectedModelPath) && aiService.TryLoadModel(selectedModelPath))
             {
+                return aiService;
+            }
+
+            // If selected model not found, try the other model type as fallback
+            var fallbackType = UserSettings.Instance.ValidatedModelType == "full" ? "lite" : "full";
+            var fallbackPath = UserSettings.GetModelFilePath(fallbackType);
+            if (File.Exists(fallbackPath) && aiService.TryLoadModel(fallbackPath))
+            {
+                return aiService;
+            }
+
+            // Try legacy paths for backwards compatibility
+            var legacyPaths = new[]
+            {
+                // Legacy model.gguf in Models directory
+                UserSettings.GetLegacyModelFilePath(),
                 // Application directory
                 Path.Combine(AppDomain.CurrentDomain.BaseDirectory, AppConfiguration.AiModelFileName),
                 // User's Desktop
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), AppConfiguration.AiModelFileName),
                 // User's Documents
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), AppConfiguration.AiModelFileName),
-                // Models subdirectory
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Models", AppConfiguration.AiModelFileName)
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), AppConfiguration.AiModelFileName)
             };
 
-            foreach (var modelPath in modelPaths)
+            foreach (var modelPath in legacyPaths)
             {
-                if (aiService.TryLoadModel(modelPath))
+                if (File.Exists(modelPath) && aiService.TryLoadModel(modelPath))
                 {
                     return aiService;
                 }
@@ -127,7 +145,8 @@ namespace TrayPerformanceMonitor
             // Initialize status window
             _statusWindow = new StatusWindow(
                 () => ShowPerformanceDialog(),
-                () => ExitApplication());
+                () => ExitApplication(),
+                () => ShowSettingsDialog());
 
             SetupStatusWindowEventHandlers();
 
@@ -156,6 +175,8 @@ namespace TrayPerformanceMonitor
             };
 
             icon.ContextMenuStrip.Items.Add("Show Performance", null, (_, _) => ShowPerformanceDialog());
+            icon.ContextMenuStrip.Items.Add("Settings", null, (_, _) => ShowSettingsDialog());
+            icon.ContextMenuStrip.Items.Add(new ToolStripSeparator());
             icon.ContextMenuStrip.Items.Add("Exit", null, (_, _) => ExitApplication());
 
             return icon;
@@ -268,6 +289,45 @@ namespace TrayPerformanceMonitor
         {
             UpdatePerformanceMetrics();
             MessageBox.Show(_trayIcon.Text, "Current Performance Metrics");
+        }
+
+        /// <summary>
+        /// Shows the settings dialog for configuring the application.
+        /// </summary>
+        private void ShowSettingsDialog()
+        {
+            using var settingsDialog = new SettingsDialog();
+            settingsDialog.ModelReloadRequested += (_, _) => ReloadAiModel();
+            
+            if (settingsDialog.ShowDialog() == DialogResult.OK)
+            {
+                // Reload settings from disk in case they changed
+                UserSettings.Reload();
+                
+                // Check if we need to reload the model
+                ReloadAiModel();
+            }
+        }
+
+        /// <summary>
+        /// Reloads the AI model. Used when the user switches models via settings.
+        /// </summary>
+        private void ReloadAiModel()
+        {
+            try
+            {
+                // Dispose existing AI service
+                _aiSummaryService?.Dispose();
+                _aiSummaryService = null;
+
+                // Try to create a new AI service with the (potentially new) model
+                _aiSummaryService = CreateAiService();
+            }
+            catch (Exception)
+            {
+                // Failed to reload - AI will be disabled
+                _aiSummaryService = null;
+            }
         }
 
         /// <summary>

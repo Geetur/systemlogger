@@ -32,6 +32,14 @@
     </None>
   </ItemGroup>
 
+  <!-- Include download script in output directory -->
+  <ItemGroup>
+    <None Include="..\Installer\Scripts\DownloadModel.ps1" Condition="Exists('..\Installer\Scripts\DownloadModel.ps1')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>Scripts\DownloadModel.ps1</Link>
+    </None>
+  </ItemGroup>
+
   <!-- Embed application icon as resource -->
   <ItemGroup>
     <EmbeddedResource Include="Resources\app.ico" LogicalName="TrayPerformanceMonitor.app.ico" />
