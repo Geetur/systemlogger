@@ -2,7 +2,7 @@
 ; Built with Inno Setup - https://jrsoftware.org/isinfo.php
 
 #define MyAppName "TrayPerformanceMonitor"
-#define MyAppVersion "1.0.0"
+#define MyAppVersion "1.3.0"
 #define MyAppPublisher "Jeter Pontes"
 #define MyAppURL "https://github.com/Geetur/systemlogger"
 #define MyAppExeName "TrayPerformanceMonitor.exe"

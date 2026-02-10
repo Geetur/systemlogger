@@ -76,6 +76,27 @@ Every IT department hears this daily. But by the time a technician investigates,
 
 </td>
 </tr>
+<tr>
+<td width="50%">
+
+### 📋 Built-In Log Viewer
+- Terminal-style dark UI with syntax highlighting
+- **Live search** with match highlighting & navigation
+- Match counter (e.g. "3 / 51") with ◀ ▶ controls
+- Auto-refresh & auto-scroll toggles
+- Keyboard shortcuts: Ctrl+F, F3, Shift+F3, Esc
+
+</td>
+<td width="50%">
+
+### 🖥️ Application Hub
+- Desktop shortcut opens the hub (single-instance IPC)
+- Quick access: View Logs, Settings, Performance, Exit
+- DPI-aware layout with TableLayoutPanel
+- Double-click tray icon to open hub
+
+</td>
+</tr>
 </table>
 
 ---
@@ -183,7 +204,7 @@ The installer creates a `settings.json` file with your chosen configuration:
 }
 ```
 
-> 💡 **Single Instance:** The app uses a mutex to ensure only one instance runs at a time. If you try to launch it again, you'll see a notification.
+> 💡 **Single Instance:** The app uses a mutex to ensure only one instance runs. If launched again, the running instance opens the **Application Hub** window via named-pipe IPC instead of showing an error.
 
 ---
 
@@ -225,7 +246,8 @@ Select your preferred model in the installer configuration page. Done!
 ```
 TrayPerformanceMonitor/
 ├── 📁 Configuration/
-│   └── AppConfiguration.cs      # All app settings in one place
+│   ├── AppConfiguration.cs      # All app settings in one place
+│   └── UserSettings.cs          # Runtime user preferences (JSON)
 │
 ├── 📁 Services/
 │   ├── 📁 Interfaces/           # Contracts for dependency injection
@@ -240,13 +262,16 @@ TrayPerformanceMonitor/
 │   └── ProcessAnalyzer.cs       # Process enumeration & sorting
 │
 ├── 📁 UI/
+│   ├── LogViewerWindow.cs       # Terminal-style log viewer with search
+│   ├── MainHubWindow.cs         # Application hub (desktop shortcut entry)
+│   ├── SettingsDialog.cs        # Settings configuration dialog
 │   └── StatusWindow.cs          # Always-on-top status display
 │
 ├── 📁 Models/
 │   └── model.gguf               # AI model (user-provided)
 │
-├── Program.cs                   # Entry point
-└── TrayAppContext.cs            # System tray & app lifecycle
+├── Program.cs                   # Entry point (mutex + named-pipe IPC)
+└── TrayAppContext.cs            # System tray, monitoring & IPC listener
 ```
 
 ### Design Principles
@@ -325,6 +350,8 @@ Both files auto-prune entries older than 7 days.
 ---
 
 ## 🤝 Contributing
+
+> **Latest Release: v1.3.0** — Built-in Log Viewer, Application Hub, Named-Pipe IPC, and search improvements. See the [release notes](https://github.com/Geetur/systemlogger/releases/tag/v1.3.0) for details.
 
 Contributions are welcome! Here's how:
 

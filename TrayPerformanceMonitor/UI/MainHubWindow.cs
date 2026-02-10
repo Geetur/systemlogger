@@ -68,11 +68,11 @@ namespace TrayPerformanceMonitor.UI
         {
             Text = "⚡ TrayPerformanceMonitor";
             Size = new Size(420, 400);
-            MinimumSize = new Size(420, 400);
-            MaximumSize = new Size(420, 400);
+            MinimumSize = new Size(360, 360);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
+            AutoScaleMode = AutoScaleMode.Dpi;
             BackColor = BackgroundColor;
             ForeColor = TextColor;
             Font = new Font("Segoe UI", 10f);
@@ -132,64 +132,6 @@ namespace TrayPerformanceMonitor.UI
             };
             header.Controls.Add(subtitleLabel);
 
-            Controls.Add(header);
-
-            // ── Button area ─────────────────────────────────────────────
-            var buttonPanel = new Panel
-            {
-                Location = new Point(0, 80),
-                Size = new Size(420, 320),
-                BackColor = BackgroundColor,
-                Padding = new Padding(28, 20, 28, 16)
-            };
-
-            var yPos = 20;
-            const int buttonHeight = 52;
-            const int spacing = 12;
-            const int buttonWidth = 350;
-
-            // ── View Logs button (primary action) ───────────────────────
-            var logsButton = CreateHubButton(
-                "📋  View Logs",
-                "Open the performance spike log viewer",
-                new Point(28, yPos),
-                new Size(buttonWidth, buttonHeight),
-                isPrimary: true);
-            logsButton.Click += (_, _) => { _onViewLogs(); Close(); };
-            buttonPanel.Controls.Add(logsButton);
-            yPos += buttonHeight + spacing;
-
-            // ── Settings button ─────────────────────────────────────────
-            var settingsButton = CreateHubButton(
-                "⚙️  Settings",
-                "Configure AI model and process count",
-                new Point(28, yPos),
-                new Size(buttonWidth, buttonHeight));
-            settingsButton.Click += (_, _) => { _onSettings(); Close(); };
-            buttonPanel.Controls.Add(settingsButton);
-            yPos += buttonHeight + spacing;
-
-            // ── Show Performance button ─────────────────────────────────
-            var perfButton = CreateHubButton(
-                "📊  Show Performance",
-                "View current CPU and RAM usage",
-                new Point(28, yPos),
-                new Size(buttonWidth, buttonHeight));
-            perfButton.Click += (_, _) => { _onShowPerformance(); Close(); };
-            buttonPanel.Controls.Add(perfButton);
-            yPos += buttonHeight + spacing;
-
-            // ── Exit button ─────────────────────────────────────────────
-            var exitButton = CreateHubButton(
-                "🚪  Exit Application",
-                "Stop monitoring and close the app",
-                new Point(28, yPos),
-                new Size(buttonWidth, buttonHeight));
-            exitButton.Click += (_, _) => { Close(); _onExit(); };
-            buttonPanel.Controls.Add(exitButton);
-
-            Controls.Add(buttonPanel);
-
             // ── Footer ──────────────────────────────────────────────────
             var footer = new Label
             {
@@ -201,19 +143,67 @@ namespace TrayPerformanceMonitor.UI
                 Height = 28,
                 BackColor = HeaderColor
             };
+
+            // ── Button area (TableLayoutPanel) ──────────────────────────
+            var buttonTable = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                BackColor = BackgroundColor,
+                ColumnCount = 1,
+                RowCount = 4,
+                Padding = new Padding(28, 16, 28, 12)
+            };
+            buttonTable.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            buttonTable.RowStyles.Add(new RowStyle(SizeType.Percent, 25));
+            buttonTable.RowStyles.Add(new RowStyle(SizeType.Percent, 25));
+            buttonTable.RowStyles.Add(new RowStyle(SizeType.Percent, 25));
+            buttonTable.RowStyles.Add(new RowStyle(SizeType.Percent, 25));
+
+            // ── View Logs button (primary action) ───────────────────────
+            var logsButton = CreateHubButton(
+                "📋  View Logs",
+                "Open the performance spike log viewer",
+                isPrimary: true);
+            logsButton.Click += (_, _) => { _onViewLogs(); Close(); };
+            buttonTable.Controls.Add(logsButton, 0, 0);
+
+            // ── Settings button ─────────────────────────────────────────
+            var settingsButton = CreateHubButton(
+                "⚙️  Settings",
+                "Configure AI model and process count");
+            settingsButton.Click += (_, _) => { _onSettings(); Close(); };
+            buttonTable.Controls.Add(settingsButton, 0, 1);
+
+            // ── Show Performance button ─────────────────────────────────
+            var perfButton = CreateHubButton(
+                "📊  Show Performance",
+                "View current CPU and RAM usage");
+            perfButton.Click += (_, _) => { _onShowPerformance(); Close(); };
+            buttonTable.Controls.Add(perfButton, 0, 2);
+
+            // ── Exit button ─────────────────────────────────────────────
+            var exitButton = CreateHubButton(
+                "🚪  Exit Application",
+                "Stop monitoring and close the app");
+            exitButton.Click += (_, _) => { Close(); _onExit(); };
+            buttonTable.Controls.Add(exitButton, 0, 3);
+
+            // Docking order: Fill first (docked last), then Bottom, then Top
+            Controls.Add(buttonTable);
             Controls.Add(footer);
+            Controls.Add(header);
         }
 
         /// <summary>
         /// Creates a styled hub button with a title and description.
         /// </summary>
-        private static Button CreateHubButton(string text, string description, Point location, Size size, bool isPrimary = false)
+        private static Button CreateHubButton(string text, string description, bool isPrimary = false)
         {
             var btn = new Button
             {
                 Text = text,
-                Location = location,
-                Size = size,
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0, 4, 0, 4),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = isPrimary ? Color.FromArgb(40, 38, 10) : ButtonBgColor,
                 ForeColor = isPrimary ? AccentColor : TextColor,

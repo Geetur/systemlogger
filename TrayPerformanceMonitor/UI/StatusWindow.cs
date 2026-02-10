@@ -122,6 +122,15 @@ namespace TrayPerformanceMonitor.UI
                 return;
             }
 
+            // Don't pin if another app window (LogViewer, MainHub, etc.) has
+            // focus – the TopMost / Show dance steals focus even with
+            // SWP_NOACTIVATE because it re-evaluates the managed TopMost flag.
+            if (Application.OpenForms.Cast<Form>()
+                    .Any(f => f != this && f.Visible && f.ContainsFocus))
+            {
+                return;
+            }
+
             try
             {
                 if (!Visible)

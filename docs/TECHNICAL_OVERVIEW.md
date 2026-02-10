@@ -43,6 +43,7 @@
 | **Performance Counters** | System.Diagnostics.PerformanceCounter |
 | **Testing** | xUnit with 49 unit tests |
 | **Installer** | Inno Setup |
+| **IPC** | Named Pipes (single-instance signaling) |
 
 ## System Requirements
 
@@ -73,10 +74,12 @@ TrayPerformanceMonitor/
 │   ├── PerformanceService.cs    # Windows performance counter wrapper
 │   └── ProcessAnalyzer.cs       # Process enumeration and ranking
 ├── UI/                      # User interface components
-│   ├── StatusWindow.cs      # Transparent overlay widget
-│   └── SettingsDialog.cs    # Settings configuration dialog
-├── TrayAppContext.cs        # Main application coordinator
-├── Program.cs               # Entry point
+│   ├── LogViewerWindow.cs   # Terminal-style log viewer with search
+│   ├── MainHubWindow.cs     # Application hub (desktop shortcut entry)
+│   ├── SettingsDialog.cs    # Settings configuration dialog
+│   └── StatusWindow.cs      # Transparent overlay widget
+├── TrayAppContext.cs        # Main application coordinator + IPC listener
+├── Program.cs               # Entry point (mutex + named-pipe IPC)
 └── Resources/               # Embedded resources (icons)
 ```
 
@@ -240,6 +243,59 @@ SetWindowPos(HWND_TOPMOST):
 ├── SWP_NOACTIVATE
 └── SWP_SHOWWINDOW
 ```
+
+**Focus-Stealing Prevention**:
+- `EnsurePinned()` skips when any other app window has focus (`ContainsFocus` check)
+- Prevents the 250ms keep-pinned timer from disrupting LogViewer/MainHub interaction
+- `SuspendPinning` property for explicit suspension during modal dialogs
+
+### 8. LogViewerWindow (Built-In Log Viewer)
+
+**Purpose**: Terminal-style dark UI for viewing, searching, and navigating spike logs without leaving the app.
+
+**Key Features**:
+- `RichTextBox` with per-line syntax highlighting (spike → red, AI → green, dates → cyan)
+- **Live search** with 300ms debounce timer, case-insensitive `string.IndexOf` scan
+- All matches highlighted (dim amber), current match bright amber with `ScrollToMatchCentered`
+- Match counter label (e.g. "3 / 51") with ◀ Prev / ▶ Next navigation
+- `FlowLayoutPanel` toolbar with margin-based spacing (no absolute positioning)
+- Auto-refresh pauses when search is active, search box is focused, or text is selected
+- Focus preservation: `LoadLogContents()` saves/restores `ActiveControl` in a `finally` block
+
+**Layout (Z-order)**:
+```
+Controls[0]: _toolbarPanel  (FlowLayoutPanel, Dock.Top, front)
+Controls[1]: _headerPanel   (Panel, Dock.Top)
+Controls[2]: _statusBarPanel(Panel, Dock.Bottom)
+Controls[3]: _logTextBox    (RichTextBox, Dock.Fill, back)
+```
+
+### 9. MainHubWindow (Application Hub)
+
+**Purpose**: Central landing page shown when the desktop shortcut is clicked or tray icon is double-clicked.
+
+**Layout**: DPI-aware `TableLayoutPanel` (4 equal rows, 1 column) with `AutoScaleMode.Dpi`.
+
+**Buttons**: View Logs (primary/gold border), Settings, Show Performance, Exit — all `Dock.Fill` with `Margin`.
+
+### 10. Single-Instance IPC (Named Pipes)
+
+**Purpose**: When a second instance launches, it signals the running instance to show the MainHub.
+
+**Flow**:
+```
+Second Launch (Program.cs):
+  1. Mutex acquired? No → connect to named pipe
+  2. Send "SHOW" message via NamedPipeClientStream
+  3. Exit gracefully
+
+Running Instance (TrayAppContext.cs):
+  1. ListenForShowSignalAsync() loops on NamedPipeServerStream
+  2. Receives "SHOW" → Invoke(ShowMainHub) on UI thread
+  3. MainHubWindow shown and brought to front
+```
+
+**Pipe Name**: `TrayPerformanceMonitor_ShowHub_8A5E2D3F`
 
 **Positioning Logic**:
 1. Find taskbar via `FindWindow("Shell_TrayWnd")`
@@ -413,6 +469,9 @@ public interface IAiSummaryService : IDisposable
 ```csharp
 public interface ILoggingService : IDisposable
 {
+    /// <summary>Gets the path to the active log file.</summary>
+    string LogFilePath { get; }
+    
     /// <summary>Logs a performance spike event.</summary>
     void LogPerformanceSpike(string metricName, float value, string topProcessesInfo);
     
@@ -495,4 +554,4 @@ cd Installer
 
 ---
 
-*Document Version: 1.0 | Last Updated: February 4, 2026*
+*Document Version: 1.3 | Last Updated: February 10, 2026*

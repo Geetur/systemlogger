@@ -62,7 +62,7 @@ namespace TrayPerformanceMonitor.UI
         private readonly System.Windows.Forms.Timer _refreshTimer;
         private readonly System.Windows.Forms.Timer _searchDebounceTimer;
         private readonly Panel _headerPanel;
-        private readonly Panel _toolbarPanel;
+        private readonly FlowLayoutPanel _toolbarPanel;
         private readonly Panel _statusBarPanel;
 
         private readonly string _logFilePath;
@@ -211,7 +211,7 @@ namespace TrayPerformanceMonitor.UI
         /// <summary>
         /// Creates the toolbar with search, refresh, and option controls.
         /// </summary>
-        private Panel CreateToolbarPanel(
+        private FlowLayoutPanel CreateToolbarPanel(
             out TextBox searchBox,
             out Button findBtn,
             out Button findPrevBtn,
@@ -224,11 +224,14 @@ namespace TrayPerformanceMonitor.UI
             out CheckBox autoRefreshCb,
             out CheckBox autoScrollCb)
         {
-            var panel = new Panel
+            var panel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
                 Height = 42,
-                BackColor = PanelColor
+                BackColor = PanelColor,
+                WrapContents = false,
+                FlowDirection = FlowDirection.LeftToRight,
+                Padding = new Padding(4, 0, 4, 0)
             };
 
             // Paint border along the bottom edge
@@ -238,8 +241,6 @@ namespace TrayPerformanceMonitor.UI
                 e.Graphics.DrawLine(pen, 0, panel.Height - 1, panel.Width, panel.Height - 1);
             };
 
-            var x = 8;
-
             // ── 🔍 icon ────────────────────────────────────────────────
             panel.Controls.Add(new Label
             {
@@ -247,17 +248,16 @@ namespace TrayPerformanceMonitor.UI
                 AutoSize = true,
                 Font = new Font("Segoe UI", 9.5f),
                 ForeColor = AccentColor,
-                Location = new Point(x, 8),
+                Margin = new Padding(4, 9, 0, 0),
                 BackColor = Color.Transparent
             });
-            x += 24;
 
             // ── Search text box ─────────────────────────────────────────
             var sb = new TextBox
             {
-                Width = 156,
+                Width = 200,
                 Height = 26,
-                Location = new Point(x, 7),
+                Margin = new Padding(2, 7, 2, 0),
                 BackColor = SearchBoxBg,
                 ForeColor = TextColor,
                 Font = new Font("Consolas", 9.5f),
@@ -267,40 +267,35 @@ namespace TrayPerformanceMonitor.UI
             };
             panel.Controls.Add(sb);
             searchBox = sb;
-            x += 160;
 
             // ── Find button ─────────────────────────────────────────────
-            var fb = CreateToolbarButton("Find", x, "Find matches (Enter)");
+            var fb = CreateToolbarButton("Find", "Find matches (Enter)");
             fb.Width = 42;
             fb.Click += (_, _) => ExecuteSearch();
             panel.Controls.Add(fb);
             findBtn = fb;
-            x += 46;
 
             // ── ◀ Previous match ────────────────────────────────────────
-            var prevB = CreateToolbarButton("◀", x, "Previous match (Shift+F3)");
+            var prevB = CreateToolbarButton("◀", "Previous match (Shift+F3)");
             prevB.Width = 26;
             prevB.Click += (_, _) => NavigatePreviousMatch();
             panel.Controls.Add(prevB);
             findPrevBtn = prevB;
-            x += 30;
 
             // ── ▶ Next match ────────────────────────────────────────────
-            var nextB = CreateToolbarButton("▶", x, "Next match (F3 / Enter)");
+            var nextB = CreateToolbarButton("▶", "Next match (F3 / Enter)");
             nextB.Width = 26;
             nextB.Click += (_, _) => NavigateNextMatch();
             panel.Controls.Add(nextB);
             findNextBtn = nextB;
-            x += 30;
 
             // ── Match count label ───────────────────────────────────────
             var countLbl = new Label
             {
                 Text = "",
-                AutoSize = false,
-                Width = 62,
-                Height = 26,
-                Location = new Point(x, 8),
+                AutoSize = true,
+                MinimumSize = new Size(70, 26),
+                Margin = new Padding(2, 8, 2, 0),
                 ForeColor = DimTextColor,
                 Font = new Font("Consolas", 8.5f),
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -308,47 +303,40 @@ namespace TrayPerformanceMonitor.UI
             };
             panel.Controls.Add(countLbl);
             matchCountLbl = countLbl;
-            x += 64;
 
             // ── ✕ Clear search ──────────────────────────────────────────
-            var clrBtn = CreateToolbarButton("✕", x, "Clear search (Esc)");
+            var clrBtn = CreateToolbarButton("✕", "Clear search (Esc)");
             clrBtn.Width = 26;
             clrBtn.Click += (_, _) => ClearSearch();
             panel.Controls.Add(clrBtn);
             clearSearchBtn = clrBtn;
-            x += 34;
 
             // ── │ separator ─────────────────────────────────────────────
-            panel.Controls.Add(new Label { Text = "│", ForeColor = BorderColor, AutoSize = true, Location = new Point(x, 8), BackColor = Color.Transparent });
-            x += 16;
+            panel.Controls.Add(CreateToolbarSeparator());
 
             // ── Refresh ─────────────────────────────────────────────────
-            var refB = CreateToolbarButton("⟳ Refresh", x, "Reload log file (F5)");
+            var refB = CreateToolbarButton("⟳ Refresh", "Reload log file (F5)");
             refB.Width = 78;
             refB.Click += (_, _) => { ClearSearchHighlights(); LoadLogContents(); };
             panel.Controls.Add(refB);
             refreshBtn = refB;
-            x += 82;
 
             // ── ⤒ Top ──────────────────────────────────────────────────
-            var topB = CreateToolbarButton("⤒", x, "Scroll to top");
+            var topB = CreateToolbarButton("⤒", "Scroll to top");
             topB.Width = 28;
             topB.Click += (_, _) => ScrollToTop();
             panel.Controls.Add(topB);
             scrollTopBtn = topB;
-            x += 32;
 
             // ── ⤓ End ──────────────────────────────────────────────────
-            var botB = CreateToolbarButton("⤓", x, "Scroll to bottom");
+            var botB = CreateToolbarButton("⤓", "Scroll to bottom");
             botB.Width = 28;
             botB.Click += (_, _) => ScrollToBottom();
             panel.Controls.Add(botB);
             scrollBottomBtn = botB;
-            x += 36;
 
             // ── │ separator ─────────────────────────────────────────────
-            panel.Controls.Add(new Label { Text = "│", ForeColor = BorderColor, AutoSize = true, Location = new Point(x, 8), BackColor = Color.Transparent });
-            x += 16;
+            panel.Controls.Add(CreateToolbarSeparator());
 
             // ── Auto-refresh toggle ─────────────────────────────────────
             var arCb = new CheckBox
@@ -358,7 +346,7 @@ namespace TrayPerformanceMonitor.UI
                 AutoSize = true,
                 ForeColor = AccentColor,
                 Font = new Font("Segoe UI", 8.5f),
-                Location = new Point(x, 8),
+                Margin = new Padding(2, 5, 2, 0),
                 BackColor = PanelColor,
                 Appearance = Appearance.Button,
                 FlatStyle = FlatStyle.Flat
@@ -381,7 +369,6 @@ namespace TrayPerformanceMonitor.UI
             };
             panel.Controls.Add(arCb);
             autoRefreshCb = arCb;
-            x += 72;
 
             // ── Auto-scroll toggle ──────────────────────────────────────
             var asCb = new CheckBox
@@ -391,7 +378,7 @@ namespace TrayPerformanceMonitor.UI
                 AutoSize = true,
                 ForeColor = AccentColor,
                 Font = new Font("Segoe UI", 8.5f),
-                Location = new Point(x, 8),
+                Margin = new Padding(2, 5, 2, 0),
                 BackColor = PanelColor,
                 Appearance = Appearance.Button,
                 FlatStyle = FlatStyle.Flat
@@ -412,13 +399,13 @@ namespace TrayPerformanceMonitor.UI
         /// <summary>
         /// Creates a flat-styled toolbar button with hover effects.
         /// </summary>
-        private static Button CreateToolbarButton(string text, int x, string tooltip)
+        private static Button CreateToolbarButton(string text, string tooltip)
         {
             var btn = new Button
             {
                 Text = text,
                 Height = 26,
-                Location = new Point(x, 5),
+                Margin = new Padding(2, 6, 2, 0),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = PanelColor,
                 ForeColor = AccentColor,
@@ -435,6 +422,21 @@ namespace TrayPerformanceMonitor.UI
             tt.SetToolTip(btn, tooltip);
 
             return btn;
+        }
+
+        /// <summary>
+        /// Creates a vertical separator label for the toolbar.
+        /// </summary>
+        private static Label CreateToolbarSeparator()
+        {
+            return new Label
+            {
+                Text = "│",
+                ForeColor = BorderColor,
+                AutoSize = true,
+                Margin = new Padding(4, 9, 4, 0),
+                BackColor = Color.Transparent
+            };
         }
 
         /// <summary>
@@ -508,6 +510,10 @@ namespace TrayPerformanceMonitor.UI
         /// </summary>
         private void LoadLogContents()
         {
+            // ── Preserve focus state so the refresh never steals focus ───
+            var activeCtl = ContainsFocus ? ActiveControl : null;
+            var searchCaret = (activeCtl == _searchBox) ? _searchBox.SelectionStart : -1;
+
             try
             {
                 if (!File.Exists(_logFilePath))
@@ -555,6 +561,20 @@ namespace TrayPerformanceMonitor.UI
                 RenderPlaceholder($"Error reading log file:\n\n{ex.Message}");
                 UpdateStatus("Error", 0, 0);
             }
+            finally
+            {
+                // ── Restore focus to whatever the user was interacting with ──
+                if (activeCtl != null && !activeCtl.IsDisposed)
+                {
+                    activeCtl.Focus();
+
+                    if (activeCtl == _searchBox && searchCaret >= 0)
+                    {
+                        _searchBox.SelectionStart = Math.Min(searchCaret, _searchBox.TextLength);
+                        _searchBox.SelectionLength = 0;
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -562,7 +582,7 @@ namespace TrayPerformanceMonitor.UI
         /// </summary>
         private void RefreshIfChanged()
         {
-            if (_disposed || _isSearchActive || !File.Exists(_logFilePath))
+            if (_disposed || _isSearchActive || IsSearchInputActive() || HasLogSelection() || !File.Exists(_logFilePath))
             {
                 return;
             }
@@ -579,6 +599,24 @@ namespace TrayPerformanceMonitor.UI
             {
                 // Ignore transient file access issues
             }
+        }
+
+        /// <summary>
+        /// Returns true when the search box is focused or contains text,
+        /// which should pause auto-refresh to avoid disrupting user input.
+        /// </summary>
+        private bool IsSearchInputActive()
+        {
+            return _searchBox.Focused || !string.IsNullOrWhiteSpace(_searchBox.Text);
+        }
+
+        /// <summary>
+        /// Returns true when the log view has a selection, which should pause
+        /// auto-refresh to avoid disrupting copy/paste actions.
+        /// </summary>
+        private bool HasLogSelection()
+        {
+            return _logTextBox.SelectionLength > 0;
         }
 
         /// <summary>
@@ -785,6 +823,11 @@ namespace TrayPerformanceMonitor.UI
             _refreshTimer.Stop();
             _isSearchActive = true;
 
+            // Clear any previous search highlights to prevent stale artifacts
+            _logTextBox.SelectAll();
+            _logTextBox.SelectionBackColor = BackgroundColor;
+            _logTextBox.DeselectAll();
+
             // Collect every match position (case-insensitive)
             _matchPositions.Clear();
             _currentMatchIndex = -1;
@@ -820,9 +863,9 @@ namespace TrayPerformanceMonitor.UI
                 var firstPos = _matchPositions[0];
                 _logTextBox.Select(firstPos, term.Length);
                 _logTextBox.SelectionBackColor = CurrentMatchBgColor;
-                _logTextBox.ScrollToCaret();
 
                 _logTextBox.ResumeLayout();
+                ScrollToMatchCentered(firstPos);
             }
             else
             {
@@ -890,9 +933,9 @@ namespace TrayPerformanceMonitor.UI
                 var curPos = _matchPositions[_currentMatchIndex];
                 _logTextBox.Select(curPos, term.Length);
                 _logTextBox.SelectionBackColor = CurrentMatchBgColor;
-                _logTextBox.ScrollToCaret();
 
                 _logTextBox.ResumeLayout();
+                ScrollToMatchCentered(curPos);
             }
             else
             {
@@ -933,9 +976,10 @@ namespace TrayPerformanceMonitor.UI
             _currentMatchIndex = (_currentMatchIndex + 1) % _matchPositions.Count;
 
             // Bright-highlight the new current match
-            _logTextBox.Select(_matchPositions[_currentMatchIndex], term.Length);
+            var pos = _matchPositions[_currentMatchIndex];
+            _logTextBox.Select(pos, term.Length);
             _logTextBox.SelectionBackColor = CurrentMatchBgColor;
-            _logTextBox.ScrollToCaret();
+            ScrollToMatchCentered(pos);
 
             UpdateMatchCountDisplay();
 
@@ -971,9 +1015,10 @@ namespace TrayPerformanceMonitor.UI
             _currentMatchIndex = (_currentMatchIndex - 1 + _matchPositions.Count) % _matchPositions.Count;
 
             // Bright-highlight the new current match
-            _logTextBox.Select(_matchPositions[_currentMatchIndex], term.Length);
+            var pos = _matchPositions[_currentMatchIndex];
+            _logTextBox.Select(pos, term.Length);
             _logTextBox.SelectionBackColor = CurrentMatchBgColor;
-            _logTextBox.ScrollToCaret();
+            ScrollToMatchCentered(pos);
 
             UpdateMatchCountDisplay();
 
@@ -1073,6 +1118,34 @@ namespace TrayPerformanceMonitor.UI
                 _logTextBox.Select(_logTextBox.TextLength, 0);
                 _logTextBox.ScrollToCaret();
             }
+        }
+
+        /// <summary>
+        /// Scrolls the log view so that the given character position is
+        /// roughly vertically centered in the visible area.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="RichTextBox.ScrollToCaret"/> only guarantees the caret
+        /// is visible — it typically lands at the very top or bottom edge of
+        /// the viewport.  This helper first scrolls to the end of the document,
+        /// then back to the target position, which forces the target line into
+        /// the middle of the visible area.
+        /// </remarks>
+        private void ScrollToMatchCentered(int charIndex)
+        {
+            if (_logTextBox.TextLength == 0)
+            {
+                return;
+            }
+
+            // Step 1: scroll to the very end so the target is above the viewport
+            _logTextBox.Select(_logTextBox.TextLength, 0);
+            _logTextBox.ScrollToCaret();
+
+            // Step 2: scroll back to the target — RichTextBox now places it
+            //         near the top/centre rather than at the bottom edge
+            _logTextBox.Select(charIndex, 0);
+            _logTextBox.ScrollToCaret();
         }
 
         // =================================================================
