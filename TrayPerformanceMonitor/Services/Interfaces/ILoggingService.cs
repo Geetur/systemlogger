@@ -41,6 +41,11 @@ namespace TrayPerformanceMonitor.Services.Interfaces
         void AppendAiSummary(string metricName, DateTime spikeTime, string aiSummary);
 
         /// <summary>
+        /// Gets the full path to the log file.
+        /// </summary>
+        string LogFilePath { get; }
+
+        /// <summary>
         /// Ensures the log file has a header for the current day.
         /// </summary>
         void EnsureDailyHeader();

@@ -35,8 +35,9 @@ namespace TrayPerformanceMonitor.UI
         /// <param name="onShowPerformance">Action to execute when "Show Performance" is clicked.</param>
         /// <param name="onExit">Action to execute when "Exit" is clicked.</param>
         /// <param name="onSettings">Action to execute when "Settings" is clicked. Can be null if not supported.</param>
+        /// <param name="onViewLogs">Action to execute when "View Logs" is clicked. Can be null if not supported.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="onShowPerformance"/> or <paramref name="onExit"/> is null.</exception>
-        public StatusWindow(Action onShowPerformance, Action onExit, Action? onSettings = null)
+        public StatusWindow(Action onShowPerformance, Action onExit, Action? onSettings = null, Action? onViewLogs = null)
         {
             ArgumentNullException.ThrowIfNull(onShowPerformance);
             ArgumentNullException.ThrowIfNull(onExit);
@@ -44,7 +45,7 @@ namespace TrayPerformanceMonitor.UI
             InitializeWindowProperties();
             (_cpuLabel, _ramLabel) = CreateLabels();
             SetWindowPosition();
-            SetupContextMenu(onShowPerformance, onExit, onSettings);
+            SetupContextMenu(onShowPerformance, onExit, onSettings, onViewLogs);
             _keepPinnedTimer = SetupKeepPinnedTimer();
         }
 
@@ -308,7 +309,8 @@ namespace TrayPerformanceMonitor.UI
         /// <param name="onShowPerformance">Action for the "Show Performance" menu item.</param>
         /// <param name="onExit">Action for the "Exit" menu item.</param>
         /// <param name="onSettings">Action for the "Settings" menu item. Can be null.</param>
-        private void SetupContextMenu(Action onShowPerformance, Action onExit, Action? onSettings)
+        /// <param name="onViewLogs">Action for the "View Logs" menu item. Can be null.</param>
+        private void SetupContextMenu(Action onShowPerformance, Action onExit, Action? onSettings, Action? onViewLogs)
         {
             var contextMenu = new ContextMenuStrip();
 
@@ -319,6 +321,12 @@ namespace TrayPerformanceMonitor.UI
             {
                 var settingsMenuItem = contextMenu.Items.Add("Settings");
                 settingsMenuItem.Click += (_, _) => onSettings();
+            }
+
+            if (onViewLogs != null)
+            {
+                var logsMenuItem = contextMenu.Items.Add("View Logs");
+                logsMenuItem.Click += (_, _) => onViewLogs();
             }
 
             contextMenu.Items.Add(new ToolStripSeparator());

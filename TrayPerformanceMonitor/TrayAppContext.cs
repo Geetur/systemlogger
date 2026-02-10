@@ -7,6 +7,7 @@
 // </summary>
 // -----------------------------------------------------------------------
 
+using System.IO.Pipes;
 using TrayPerformanceMonitor.Configuration;
 using TrayPerformanceMonitor.Services;
 using TrayPerformanceMonitor.Services.Interfaces;
@@ -35,6 +36,7 @@ namespace TrayPerformanceMonitor
 
         private readonly SpikeTracker _cpuSpikeTracker;
         private readonly SpikeTracker _ramSpikeTracker;
+        private readonly CancellationTokenSource _pipeCts = new();
 
         private bool _disposed;
 
@@ -146,7 +148,8 @@ namespace TrayPerformanceMonitor
             _statusWindow = new StatusWindow(
                 () => ShowPerformanceDialog(),
                 () => ExitApplication(),
-                () => ShowSettingsDialog());
+                () => ShowSettingsDialog(),
+                () => ShowLogViewer());
 
             SetupStatusWindowEventHandlers();
 
@@ -158,6 +161,9 @@ namespace TrayPerformanceMonitor
 
             // Perform initial update
             UpdatePerformanceMetrics();
+
+            // Start listening for signals from subsequent launches
+            _ = ListenForShowSignalAsync(_pipeCts.Token);
         }
 
         /// <summary>
@@ -176,8 +182,12 @@ namespace TrayPerformanceMonitor
 
             icon.ContextMenuStrip.Items.Add("Show Performance", null, (_, _) => ShowPerformanceDialog());
             icon.ContextMenuStrip.Items.Add("Settings", null, (_, _) => ShowSettingsDialog());
+            icon.ContextMenuStrip.Items.Add("View Logs", null, (_, _) => ShowLogViewer());
             icon.ContextMenuStrip.Items.Add(new ToolStripSeparator());
             icon.ContextMenuStrip.Items.Add("Exit", null, (_, _) => ExitApplication());
+
+            // Double-click the tray icon → show the main hub
+            icon.DoubleClick += (_, _) => ShowMainHub();
 
             return icon;
         }
@@ -310,6 +320,83 @@ namespace TrayPerformanceMonitor
         }
 
         /// <summary>
+        /// Shows the log viewer window.
+        /// </summary>
+        private void ShowLogViewer()
+        {
+            var logPath = _loggingService.LogFilePath;
+            var viewer = new LogViewerWindow(logPath);
+            viewer.Show();
+        }
+
+        /// <summary>
+        /// Shows the main hub window with quick access to all features.
+        /// </summary>
+        private void ShowMainHub()
+        {
+            var hub = new MainHubWindow(
+                () => ShowSettingsDialog(),
+                () => ShowLogViewer(),
+                () => ShowPerformanceDialog(),
+                () => ExitApplication());
+
+            hub.Show();
+            hub.BringToFront();
+            hub.Activate();
+        }
+
+        /// <summary>
+        /// Listens on a named pipe for "SHOW" commands from subsequent launch attempts.
+        /// When a command is received the main hub window is shown on the UI thread.
+        /// </summary>
+        /// <param name="cancellationToken">Token to cancel the listener on shutdown.</param>
+        private async Task ListenForShowSignalAsync(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                try
+                {
+                    using var server = new NamedPipeServerStream(
+                        Program.PipeName,
+                        PipeDirection.In,
+                        1,
+                        PipeTransmissionMode.Byte,
+                        PipeOptions.Asynchronous);
+
+                    await server.WaitForConnectionAsync(cancellationToken);
+
+                    using var reader = new StreamReader(server);
+                    var message = await reader.ReadLineAsync(cancellationToken);
+
+                    if (message?.Trim().Equals("SHOW", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        // Marshal to the UI thread
+                        if (_statusWindow != null && _statusWindow.IsHandleCreated)
+                        {
+                            _statusWindow.BeginInvoke(ShowMainHub);
+                        }
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    break;
+                }
+                catch (Exception)
+                {
+                    // Transient pipe errors – wait briefly then retry
+                    try
+                    {
+                        await Task.Delay(500, cancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        break;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
         /// Reloads the AI model. Used when the user switches models via settings.
         /// </summary>
         private void ReloadAiModel()
@@ -425,6 +512,7 @@ namespace TrayPerformanceMonitor
         /// </summary>
         private void ExitApplication()
         {
+            _pipeCts.Cancel();
             _timer.Stop();
 
             // Close and dispose UI components
@@ -489,6 +577,15 @@ namespace TrayPerformanceMonitor
             try
             {
                 _timer?.Dispose();
+            }
+            catch (Exception)
+            {
+                // Ignore disposal failures
+            }
+
+            try
+            {
+                _pipeCts?.Dispose();
             }
             catch (Exception)
             {

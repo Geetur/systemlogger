@@ -69,6 +69,9 @@ namespace TrayPerformanceMonitor.Services
         }
 
         /// <inheritdoc/>
+        public string LogFilePath => _logPath;
+
+        /// <inheritdoc/>
         public void LogPerformanceSpike(string metricName, float value, string topProcessesInfo)
         {
             LogPerformanceSpike(metricName, value, topProcessesInfo, aiSummary: null);
