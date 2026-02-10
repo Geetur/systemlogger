@@ -346,7 +346,7 @@ Distributed under the **MIT License**. See [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-*Developed during an internship at **Outback Construction Inc.***
+*Developed during a software engineerin internship*
 
 </div>
 
